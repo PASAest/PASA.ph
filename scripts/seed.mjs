@@ -70,6 +70,17 @@ async function once(client, table, ownerCol, ownerId, rows) {
   if (error) throw new Error(`${table}: ${error.message}`);
 }
 
+/** Adds each listing whose title this seller doesn't have yet, so re-running picks up newly added items. */
+async function addListings(client, sellerId, rows) {
+  const { data } = await client.from('listings').select('title').eq('seller_id', sellerId);
+  const have = new Set((data ?? []).map((l) => l.title));
+  const missing = rows.filter((r) => !have.has(r.title)).map((r) => ({ ...r, seller_id: sellerId }));
+  if (!missing.length) return 0;
+  const { error } = await client.from('listings').insert(missing, { defaultToNull: false });
+  if (error) throw new Error(`listings: ${error.message}`);
+  return missing.length;
+}
+
 const andrea = await login('andrea');
 const miguel = await login('miguel');
 const bea = await login('bea');
@@ -100,7 +111,7 @@ await once(carlo.client, 'posts', 'author_id', carlo.id, [
   },
 ]);
 
-await once(carlo.client, 'listings', 'seller_id', carlo.id, [
+await addListings(carlo.client, carlo.id, [
   {
     seller_id: carlo.id, category: 'calculator', mode: 'sale', title: 'Casio fx-991ES Plus', condition: 'Like new', price: 650,
     meetup_spot: 'Cafeteria', description: 'Used for one semester only. Complete with cover. Allowed in board exams.',
@@ -110,13 +121,13 @@ await once(carlo.client, 'listings', 'seller_id', carlo.id, [
     price: 50, deposit: 300, meetup_spot: 'Main Library', description: 'Some highlights in chapters 1–3. Rent it for the sem!',
   },
 ]);
-await once(miguel.client, 'listings', 'seller_id', miguel.id, [
+await addListings(miguel.client, miguel.id, [
   {
     seller_id: miguel.id, category: 'book', mode: 'rent', title: 'Intermediate Accounting Vol. 1', book_author: 'Valix, Peralta', condition: 'Good',
     price: 60, deposit: 400, meetup_spot: 'Main Library', description: 'Latest edition. Clean pages, no writing inside.',
   },
 ]);
-await once(bea.client, 'listings', 'seller_id', bea.id, [
+await addListings(bea.client, bea.id, [
   {
     seller_id: bea.id, category: 'book', mode: 'sale', title: 'Calculus: Early Transcendentals, 8th Ed.', book_author: 'Stewart', condition: 'Fair',
     price: 450, meetup_spot: 'Study Hall', description: 'Cover is a bit worn but all pages intact.',
@@ -126,6 +137,33 @@ await once(bea.client, 'listings', 'seller_id', bea.id, [
     price: 40, deposit: 500, meetup_spot: 'Study Hall', description: 'Rent for exam week. Deposit returned when you give it back.',
   },
 ]);
+
+// More items so there's plenty to buy and rent in Assets.
+const boosted = new Date(Date.now() + 3 * 86400000).toISOString();
+const extra = [
+  await addListings(carlo.client, carlo.id, [
+    { category: 'book', mode: 'sale', title: 'Principles of Economics, 8th Ed.', book_author: 'Mankiw', condition: 'Good', price: 380, meetup_spot: 'Cafeteria', description: 'Used for ECON 1. A few pencil notes in the margins, easy to erase.' },
+    { category: 'calculator', mode: 'sale', title: 'Casio fx-82MS', condition: 'Good', price: 350, meetup_spot: 'Cafeteria', description: 'Basic scientific calculator, perfect for first-year math. Battery just replaced.' },
+    { category: 'book', mode: 'sale', title: 'Readings in Philippine History', condition: 'Like new', price: 200, meetup_spot: 'Student Lounge', description: 'GE book, barely opened. Cover still glossy.' },
+    { category: 'book', mode: 'sale', title: 'Mathematics in the Modern World', condition: 'Good', price: 180, meetup_spot: 'Student Lounge', description: 'GE math book. Name written on the first page, otherwise clean.' },
+  ]),
+  await addListings(miguel.client, miguel.id, [
+    { category: 'calculator', mode: 'sale', title: 'Casio fx-991EX ClassWiz', condition: 'Like new', price: 900, meetup_spot: 'Main Library', description: 'Upgraded to a newer model, so letting this go. Complete with box and cover.', boosted_until: boosted },
+    { category: 'book', mode: 'sale', title: 'Cost Accounting: Principles and Procedures', book_author: 'Guerrero, Peralta', condition: 'Good', price: 420, meetup_spot: 'Main Library', description: 'Clean copy. Helpful for Cost Accounting 1 and 2.' },
+    { category: 'book', mode: 'rent', title: 'Basic Financial Accounting and Reporting', book_author: 'Ballada', condition: 'Good', price: 45, deposit: 300, meetup_spot: 'Main Library', description: 'Great for first-year BSA. Rent it for the whole sem.' },
+  ]),
+  await addListings(bea.client, bea.id, [
+    { category: 'book', mode: 'sale', title: 'Elementary Statistics: A Step by Step Approach', book_author: 'Bluman', condition: 'Good', price: 500, meetup_spot: 'Study Hall', description: 'Used for STAT 101. Some highlights in chapters 2 to 5.' },
+    { category: 'book', mode: 'rent', title: 'Discrete Mathematics and Its Applications', book_author: 'Rosen', condition: 'Good', price: 70, deposit: 500, meetup_spot: 'Study Hall', description: 'Heavy but worth it for CS students. Rent weekly.' },
+    { category: 'book', mode: 'sale', title: 'Physics for Scientists and Engineers', book_author: 'Serway, Jewett', condition: 'Fair', price: 600, meetup_spot: 'Study Hall', description: 'Spine is a bit loose but all pages are complete.' },
+    { category: 'calculator', mode: 'rent', title: 'Sharp EL-W516X', condition: 'Good', price: 35, deposit: 400, meetup_spot: 'Study Hall', description: 'Rent for exam week. Deposit returned when you give it back.' },
+  ]),
+  await addListings(andrea.client, andrea.id, [
+    { category: 'book', mode: 'sale', title: 'Purposive Communication', condition: 'Like new', price: 150, meetup_spot: 'Cafeteria', description: 'Bought it but our prof gave us a PDF. Still wrapped in plastic.' },
+    { category: 'calculator', mode: 'sale', title: 'Casio fx-570ES Plus', condition: 'Good', price: 500, meetup_spot: 'Cafeteria', description: 'Got a new one as a gift, so selling this. Works perfectly.' },
+  ]),
+].reduce((a, b) => a + b, 0);
+console.log(`✓ ${extra} new item${extra === 1 ? '' : 's'} added to Assets`);
 
 // A few past reviews so ratings show on the tutors' profiles.
 const review = (client, reviewer_id, reviewee_id, role, stars, comment) =>
