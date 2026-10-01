@@ -1,25 +1,58 @@
 {
   "expo": {
-    "name": "pasa-app",
-    "slug": "pasa-app",
+    "name": "PASA",
+    "slug": "pasa",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.pasa.campus"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#F2FBFF",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.pasa.campus"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "name": "PASA",
+      "shortName": "PASA",
+      "themeColor": "#87CEEB",
+      "backgroundColor": "#F2FBFF",
+      "display": "standalone"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-sqlite",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "backgroundColor": "#F2FBFF"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "PASA uses your photos for listing pictures and your profile photo."
+        }
+      ]
+    ],
+    "scheme": "pasa",
+    "experiments": {
+      "typedRoutes": false
     }
   }
 }

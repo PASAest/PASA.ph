@@ -1,0 +1,85 @@
+import { Ionicons } from '@expo/vector-icons';
+import { router, Stack } from 'expo-router';
+import type { ReactNode } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, font, space } from '@/theme';
+import { Text } from './ui';
+
+type Props = {
+  children: ReactNode;
+  title?: string;
+  /** Show a back button in the header. */
+  back?: boolean;
+  right?: ReactNode;
+  scroll?: boolean;
+  refreshing?: boolean;
+  onRefresh?: () => void;
+  footer?: ReactNode;
+  padded?: boolean;
+};
+
+/** Standard page: safe area, optional header, scrolling body and a sticky footer for main actions. */
+export function Screen({ children, title, back, right, scroll = true, refreshing, onRefresh, footer, padded = true }: Props) {
+  const insets = useSafeAreaInsets();
+  const body = padded ? { padding: space(4), gap: space(4) } : undefined;
+  return (
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Stack.Screen options={{ headerShown: false }} />
+      {(title || back) && (
+        <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
+          {back ? (
+            <Pressable
+              onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+              hitSlop={12}
+              accessibilityLabel="Go back"
+              style={styles.headerBtn}
+            >
+              <Ionicons name="chevron-back" size={24} color={colors.text} />
+            </Pressable>
+          ) : (
+            <View style={styles.headerBtn} />
+          )}
+          <Text numberOfLines={1} style={styles.headerTitle}>
+            {title}
+          </Text>
+          <View style={[styles.headerBtn, { alignItems: 'flex-end' }]}>{right}</View>
+        </View>
+      )}
+      {scroll ? (
+        <ScrollView
+          contentContainerStyle={[body, { paddingBottom: footer ? space(4) : insets.bottom + space(6) }]}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={colors.primary} /> : undefined}
+        >
+          {children}
+        </ScrollView>
+      ) : (
+        <View style={[{ flex: 1 }, body]}>{children}</View>
+      )}
+      {footer && <View style={[styles.footer, { paddingBottom: insets.bottom + space(3) }]}>{footer}</View>}
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: space(3),
+    paddingBottom: space(2),
+    backgroundColor: colors.bg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  headerBtn: { width: 64, justifyContent: 'center' },
+  headerTitle: { flex: 1, textAlign: 'center', fontFamily: font.bold, fontSize: 17 },
+  footer: {
+    paddingHorizontal: space(4),
+    paddingTop: space(3),
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: space(2),
+  },
+});
