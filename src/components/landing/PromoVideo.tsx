@@ -4,6 +4,10 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 const SOURCE = 'https://pasa.vercel.app/media/pasa-promo.mp4';
 
 export function PromoVideo() {
-  const player = useVideoPlayer(SOURCE);
-  return <VideoView player={player} style={{ width: '100%', height: '100%' }} nativeControls contentFit="cover" />;
+  const player = useVideoPlayer(SOURCE, (p) => {
+    p.muted = true;
+    p.loop = true;
+    p.play();
+  });
+  return <VideoView player={player} style={{ width: '100%', height: '100%' }} nativeControls={false} contentFit="cover" />;
 }

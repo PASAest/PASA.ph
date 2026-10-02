@@ -146,10 +146,6 @@ export default function Landing() {
         {/* Promo video */}
         <View style={[section, { marginTop: 70 }]}>
           <Reveal distance={18}>
-            <View style={{ flexDirection: wide ? 'row' : 'column', justifyContent: 'space-between', alignItems: wide ? 'flex-end' : 'flex-start', gap: 6, marginBottom: 20 }}>
-              <Text style={[styles.h2, { fontSize: wide ? 40 : 30 }]}>PASA in 36 seconds</Text>
-              <Text style={{ color: P.muted, fontSize: 15 }}>Sound on.</Text>
-            </View>
             <View style={styles.videoFrame}>
               <PromoVideo />
             </View>
