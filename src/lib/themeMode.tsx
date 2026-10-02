@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { useColorScheme } from 'react-native';
 import { applyScheme, saveMode, storedMode, type Scheme, type ThemeMode } from '@/theme';
 
-type ThemeState = { mode: ThemeMode; scheme: Scheme; setMode: (m: ThemeMode) => void };
+type ThemeState = { mode: ThemeMode; scheme: Scheme; setMode: (m: ThemeMode, opts?: { returnHere?: boolean }) => void };
 const ThemeContext = createContext<ThemeState>({ mode: 'system', scheme: 'light', setMode: () => {} });
 
 /**
@@ -23,9 +23,9 @@ export function ThemeProvider({ children }: { children: (scheme: Scheme) => Reac
     returnTo.current = null;
   }, [effective, path]);
 
-  const setMode = (m: ThemeMode) => {
+  const setMode = (m: ThemeMode, { returnHere = true }: { returnHere?: boolean } = {}) => {
     saveMode(m);
-    returnTo.current = path;
+    returnTo.current = returnHere ? path : null;
     setModeState(m);
   };
 

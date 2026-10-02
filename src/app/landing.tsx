@@ -1,7 +1,7 @@
 import { BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold, useFonts } from '@expo-google-fonts/bricolage-grotesque';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router } from 'expo-router';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Animated, Easing, Linking, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type TextStyle } from 'react-native';
 import { Reveal, useCountUp, useReducedMotion, useRevealScroll } from '@/components/landing/Motion';
 import { PromoVideo } from '@/components/landing/PromoVideo';
@@ -11,10 +11,12 @@ import { ANDROID_APK_URL, CATEGORIES, CONTACT_EMAIL, FACEBOOK_URL, PROGRAMS, SCH
 import { useAuth } from '@/lib/auth';
 import { peso } from '@/lib/format';
 import { PLUS_PLANS, useSettings } from '@/lib/settings';
-import { font } from '@/theme';
+import { useTheme } from '@/lib/themeMode';
+import { font, saveMode, type Scheme } from '@/theme';
 
-// The landing page has its own fixed "campus notice board" look: warm paper, navy ink, sky blue, a marker yellow.
-const P = {
+// The landing page has its own "campus notice board" look: warm paper, navy ink, sky blue, a marker yellow.
+// It has a matching dark version; switching fades between them instead of reloading the page.
+const LIGHT = {
   paper: '#FAF9F5',
   card: '#FFFFFF',
   ink: '#10283D',
@@ -27,7 +29,51 @@ const P = {
   marker: '#FFE58A',
   green: '#2E8B57',
   tape: 'rgba(135,206,235,0.55)',
+  btn: '#10283D', // primary button
+  btnText: '#FFFFFF',
+  band: '#10283D', // closing call-to-action band
+  shadow: 0.1,
 };
+
+const DARK: typeof LIGHT = {
+  paper: '#0E1620',
+  card: '#152230',
+  ink: '#EAF2F8',
+  ink2: '#B3C4D2',
+  muted: '#8197A8',
+  rule: '#24364A',
+  sky: '#87CEEB',
+  skySoft: '#183247',
+  blue: '#86C9EE',
+  marker: '#F2D46A',
+  green: '#5CC98A',
+  tape: 'rgba(135,206,235,0.35)',
+  btn: '#87CEEB',
+  btnText: '#0E1620',
+  band: '#1A3550',
+  shadow: 0.35,
+};
+
+type Palette = typeof LIGHT;
+const INK_ON_LIGHT = '#10283D'; // text on fixed light surfaces (highlighter, pastel avatars)
+const PalCtx = createContext<Palette>(LIGHT);
+const usePal = () => useContext(PalCtx);
+const useStyles = () => {
+  const P = usePal();
+  return useMemo(() => makeStyles(P), [P]);
+};
+
+// On the web, colors fade instead of snapping when the palette changes.
+const TRANSITION_CSS = `#landing-root, #landing-root * { transition: background-color 450ms ease, color 450ms ease, border-color 450ms ease; }`;
+function useColorTransitions() {
+  useEffect(() => {
+    if (Platform.OS !== 'web' || document.getElementById('landing-transitions')) return;
+    const tag = document.createElement('style');
+    tag.id = 'landing-transitions';
+    tag.textContent = TRANSITION_CSS;
+    document.head.appendChild(tag);
+  }, []);
+}
 const H = 'BricolageGrotesque_800ExtraBold';
 const H7 = 'BricolageGrotesque_700Bold';
 const SCHOOL_NAMES = SCHOOLS.filter((s) => s !== 'Other');
@@ -50,13 +96,29 @@ export default function Landing() {
   const scroll = useRevealScroll();
   const scrollRef = useRef<ScrollView>(null);
   const anchors = useRef<Record<string, number>>({});
+  const theme = useTheme();
+  const [mode, setMode] = useState<Scheme>(theme.scheme);
+  const P = mode === 'dark' ? DARK : LIGHT;
+  const styles = useMemo(() => makeStyles(P), [P]);
+  useColorTransitions();
   const wide = width >= 980;
   const pad = wide ? 56 : 20;
 
   if (session) return <Redirect href="/(tabs)" />;
   if (!fontsLoaded) return <Loading />;
 
-  const start = () => router.push('/welcome');
+  const toggleMode = () => {
+    const next: Scheme = mode === 'dark' ? 'light' : 'dark';
+    setMode(next);
+    saveMode(next); // remembered for next time and for the app
+  };
+  // Leaving the landing page: bring the app's theme in line with what the visitor picked here.
+  // Navigate first, then switch the app's theme once the new screen is showing (it rebuilds at the current URL).
+  const open = (href: '/welcome' | '/log-in' | '/terms' | '/admin') => {
+    router.push(href);
+    if (theme.scheme !== mode) setTimeout(() => theme.setMode(mode, { returnHere: false }), 250);
+  };
+  const start = () => open('/welcome');
   const setAnchor = (key: string, e: { nativeEvent: { layout: { y: number } } }) => {
     anchors.current[key] = e.nativeEvent.layout.y;
   };
@@ -64,9 +126,11 @@ export default function Landing() {
   const section = { width: '100%', maxWidth: 1220, paddingHorizontal: pad } as const;
 
   return (
+    <PalCtx.Provider value={P}>
     <scroll.Provider value={scroll.value}>
       <ScrollView
         ref={scrollRef}
+        nativeID="landing-root"
         style={{ flex: 1, backgroundColor: P.paper }}
         contentContainerStyle={{ alignItems: 'center' }}
         scrollEventThrottle={32}
@@ -94,7 +158,8 @@ export default function Landing() {
             </View>
           )}
           <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
-            <Text onPress={() => router.push('/log-in')} style={styles.navLink}>
+            <ThemeToggle dark={mode === 'dark'} onPress={toggleMode} />
+            <Text onPress={() => open('/log-in')} style={styles.navLink}>
               Log in
             </Text>
             <Btn title="Sign up" onPress={start} small />
@@ -109,7 +174,7 @@ export default function Landing() {
               Pass the subject.{'\n'}Pass on the book.
             </Text>
             <Text style={{ fontFamily: H7, fontSize: wide ? 26 : 21, color: P.ink }}>
-              Turn Potential Into <Text style={{ fontFamily: H7, fontSize: wide ? 26 : 21, color: P.ink, backgroundColor: P.marker, paddingHorizontal: 4 }}>PASAbilities</Text>.
+              Turn Potential Into <Text style={{ fontFamily: H7, fontSize: wide ? 26 : 21, color: INK_ON_LIGHT, backgroundColor: P.marker, paddingHorizontal: 4 }}>PASAbilities</Text>.
             </Text>
             <Text style={styles.lead}>
               PASA is where students tutor students and trade the stuff school makes you buy. Book a tutor online or in person, sell or rent your old books and calculators, and pay safely with GCash or Maya.
@@ -338,31 +403,35 @@ export default function Landing() {
             <Text style={{ color: P.muted }}>© {new Date().getFullYear()} PASA · Turn Potential Into PASAbilities</Text>
           </View>
           <View style={{ flexDirection: 'row', gap: 22, flexWrap: 'wrap' }}>
-            <FootLink label="Terms & privacy" onPress={() => router.push('/terms')} />
+            <FootLink label="Terms & privacy" onPress={() => open('/terms')} />
             {!!FACEBOOK_URL && <FootLink label="Facebook" onPress={() => Linking.openURL(FACEBOOK_URL)} />}
             {!!CONTACT_EMAIL && <FootLink label={CONTACT_EMAIL} onPress={() => Linking.openURL(`mailto:${CONTACT_EMAIL}`)} />}
-            <FootLink label="Admin" onPress={() => router.push('/admin')} />
+            <FootLink label="Admin" onPress={() => open('/admin')} />
           </View>
         </View>
       </ScrollView>
     </scroll.Provider>
+    </PalCtx.Provider>
   );
 }
 
 /* ── Pieces ─────────────────────────────────────────────────────────────── */
 
 function Btn({ title, onPress, small, light }: { title: string; onPress: () => void; small?: boolean; light?: boolean }) {
+  const P = usePal();
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.btn, small && { paddingVertical: 9, paddingHorizontal: 16 }, light && { backgroundColor: '#fff' }, pressed && { opacity: 0.85 }]}
     >
-      <Text style={{ color: light ? P.ink : '#fff', fontFamily: font.bold, fontSize: small ? 14.5 : 16 }}>{title}</Text>
+      <Text style={{ color: light ? INK_ON_LIGHT : P.btnText, fontFamily: font.bold, fontSize: small ? 14.5 : 16 }}>{title}</Text>
     </Pressable>
   );
 }
 
 function FootLink({ label, onPress }: { label: string; onPress: () => void }) {
+  const P = usePal();
   return (
     <Text onPress={onPress} style={{ color: P.ink2, fontSize: 14.5 }}>
       {label}
@@ -371,6 +440,8 @@ function FootLink({ label, onPress }: { label: string; onPress: () => void }) {
 }
 
 function Stat({ value, label, suffix = '', first, wide }: { value: number; label: string; suffix?: string; first?: boolean; wide: boolean }) {
+  const P = usePal();
+  const styles = useStyles();
   const { n, ref } = useCountUp(value, 1100);
   return (
     <View ref={ref} collapsable={false} style={[styles.stat, wide ? { flex: 1 } : { width: '50%', paddingHorizontal: 14 }, first && { borderLeftWidth: 0 }]}>
@@ -384,6 +455,8 @@ function Stat({ value, label, suffix = '', first, wide }: { value: number; label
 }
 
 function Steps({ title, steps }: { title: string; steps: [string, string][] }) {
+  const P = usePal();
+  const styles = useStyles();
   return (
     <Reveal distance={18} style={{ flex: 1 }}>
       <Text style={{ fontFamily: H7, fontSize: 22, color: P.ink, marginBottom: 16 }}>{title}</Text>
@@ -401,10 +474,12 @@ function Steps({ title, steps }: { title: string; steps: [string, string][] }) {
 }
 
 function TutorRow({ name, meta, subjects, rate, modes, rating, color }: { name: string; meta: string; subjects: string; rate: number; modes: string; rating: string; color: string }) {
+  const P = usePal();
+  const styles = useStyles();
   return (
     <View style={styles.tutor}>
       <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: color, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ fontFamily: H7, color: P.ink, fontSize: 17 }}>
+        <Text style={{ fontFamily: H7, color: INK_ON_LIGHT, fontSize: 17 }}>
           {name
             .split(' ')
             .map((w) => w[0])
@@ -426,6 +501,8 @@ function TutorRow({ name, meta, subjects, rate, modes, rating, color }: { name: 
 }
 
 function Item({ icon, title, price, note }: { icon: IconName; title: string; price: string; note: string }) {
+  const P = usePal();
+  const styles = useStyles();
   return (
     <View style={styles.item}>
       <View style={styles.itemPhoto}>
@@ -443,6 +520,8 @@ function Item({ icon, title, price, note }: { icon: IconName; title: string; pri
 }
 
 function FaqItem({ q, a }: { q: string; a: string }) {
+  const P = usePal();
+  const styles = useStyles();
   const [open, setOpen] = useState(false);
   return (
     <Pressable onPress={() => setOpen((o) => !o)} style={styles.faq} accessibilityRole="button" accessibilityState={{ expanded: open }}>
@@ -458,6 +537,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 /* ── Hero "notice board": real PASA cards pinned with tape, settling in on load ── */
 
 function Pinned({ children, rotate, delay, style }: { children: ReactNode; rotate: number; delay: number; style: object }) {
+  const styles = useStyles();
   const reduced = useReducedMotion();
   const [v] = useState(() => new Animated.Value(0));
   useEffect(() => {
@@ -484,6 +564,8 @@ function Pinned({ children, rotate, delay, style }: { children: ReactNode; rotat
 }
 
 function Board({ wide }: { wide: boolean }) {
+  const P = usePal();
+  const styles = useStyles();
   return (
     <View style={{ flex: 1 }}>
       <Pinned rotate={-3} delay={150} style={{ top: 10, left: wide ? 10 : 0, width: wide ? 330 : 290 }}>
@@ -536,15 +618,17 @@ function Board({ wide }: { wide: boolean }) {
   );
 }
 
-function Tag({ text, bg = P.skySoft }: { text: string; bg?: string }) {
+function Tag({ text, bg }: { text: string; bg?: string }) {
+  const P = usePal();
   return (
-    <View style={{ backgroundColor: bg, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
-      <Text style={{ color: P.ink, fontSize: 12.5, fontFamily: font.semibold }}>{text}</Text>
+    <View style={{ backgroundColor: bg ?? P.skySoft, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+      <Text style={{ color: bg ? INK_ON_LIGHT : P.ink, fontSize: 12.5, fontFamily: font.semibold }}>{text}</Text>
     </View>
   );
 }
 
 function Row({ k, v, bold }: { k: string; v: string; bold?: boolean }) {
+  const P = usePal();
   const s: TextStyle = { color: P.ink, fontSize: 14, fontFamily: bold ? font.bold : font.regular };
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -554,7 +638,35 @@ function Row({ k, v, bold }: { k: string; v: string; bold?: boolean }) {
   );
 }
 
-const styles = StyleSheet.create({
+/** Sun / moon switch: the icon turns and cross-fades while the page colors fade. */
+function ThemeToggle({ dark, onPress }: { dark: boolean; onPress: () => void }) {
+  const P = usePal();
+  const reduced = useReducedMotion();
+  const [v] = useState(() => new Animated.Value(dark ? 1 : 0));
+  useEffect(() => {
+    Animated.timing(v, { toValue: dark ? 1 : 0, duration: reduced ? 0 : 450, easing: Easing.inOut(Easing.cubic), useNativeDriver: Platform.OS !== 'web' }).start();
+  }, [dark, v, reduced]);
+  const spin = v.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: dark }}
+      accessibilityLabel={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+      style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: P.rule, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.7 : 1 })}
+    >
+      <Animated.View style={{ position: 'absolute', opacity: v.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }), transform: [{ rotate: spin }] }}>
+        <Ionicons name="moon-outline" size={19} color={P.ink} />
+      </Animated.View>
+      <Animated.View style={{ position: 'absolute', opacity: v, transform: [{ rotate: spin }] }}>
+        <Ionicons name="sunny-outline" size={20} color={P.ink} />
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+const makeStyles = (P: Palette) =>
+  StyleSheet.create({
   nav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 22 },
   navLink: { color: P.ink, fontFamily: font.semibold, fontSize: 15 },
   hero: { gap: 40, marginTop: 20 },
@@ -564,7 +676,7 @@ const styles = StyleSheet.create({
   lead: { color: P.ink2, fontSize: 18.5, lineHeight: 29, maxWidth: 560 },
   body: { color: P.ink2, fontSize: 17, lineHeight: 27 },
   label: { color: P.blue, fontFamily: font.bold, fontSize: 14, textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 10 },
-  btn: { backgroundColor: P.ink, paddingVertical: 14, paddingHorizontal: 22, borderRadius: 10 },
+  btn: { backgroundColor: P.btn, paddingVertical: 14, paddingHorizontal: 22, borderRadius: 10 },
   stats: { borderTopWidth: 2, borderBottomWidth: 1, borderTopColor: P.ink, borderBottomColor: P.rule },
   stat: { paddingVertical: 22, paddingHorizontal: 22, gap: 4, borderLeftWidth: 1, borderLeftColor: P.rule },
   videoFrame: { width: '100%', aspectRatio: 16 / 9, borderRadius: 14, overflow: 'hidden', backgroundColor: '#0B1520' },
@@ -582,7 +694,7 @@ const styles = StyleSheet.create({
   plans: { gap: 14, marginTop: 30 },
   plan: { flex: 1, backgroundColor: P.card, borderRadius: 12, padding: 22, gap: 6, borderWidth: 1, borderColor: P.rule },
   faq: { paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: P.rule },
-  closing: { backgroundColor: P.ink, borderRadius: 18, padding: 40, gap: 24 },
+  closing: { backgroundColor: P.band, borderRadius: 18, padding: 40, gap: 24 },
   footer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 16, paddingVertical: 40 },
   note: {
     backgroundColor: P.card,
@@ -592,13 +704,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: P.rule,
     shadowColor: '#10283D',
-    shadowOpacity: 0.1,
+    shadowOpacity: P.shadow,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
   },
   tape: { position: 'absolute', top: -10, alignSelf: 'center', width: 80, height: 22, backgroundColor: P.tape, zIndex: 2, transform: [{ rotate: '-4deg' }] },
   avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontFamily: H7, color: P.ink, fontSize: 14 },
+  avatarText: { fontFamily: H7, color: INK_ON_LIGHT, fontSize: 14 },
   noteName: { fontFamily: font.bold, fontSize: 15.5, color: P.ink },
   noteMeta: { color: P.muted, fontSize: 12.5 },
   noteBody: { color: P.ink, fontSize: 15, lineHeight: 22 },
