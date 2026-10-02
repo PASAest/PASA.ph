@@ -1,12 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createElement, useCallback, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { PixelRatio, Pressable, Text, useWindowDimensions, View } from 'react-native';
 
 // Web: starts on its own, looped. Browsers only allow autoplay while muted, so a "Tap for sound" button
 // turns the soundtrack on. It plays whenever it's on screen and pauses when scrolled away.
 const VIDEO_ID = 'pasa-promo-video';
 
 export function PromoVideo() {
+  // Sharp 1080p (12 MB) when the video is shown wide or on a high-density screen; 720p (3 MB) on small phones.
+  const { width } = useWindowDimensions();
+  const src = width * PixelRatio.get() >= 1100 && width >= 600 ? '/media/pasa-promo-1080.mp4' : '/media/pasa-promo-720.mp4';
   const [muted, setMuted] = useState(true);
 
   const attach = useCallback((v: HTMLVideoElement | null) => {
@@ -41,7 +44,7 @@ export function PromoVideo() {
       {createElement('video', {
         ref: attach,
         id: VIDEO_ID,
-        src: '/media/pasa-promo.mp4',
+        src,
         poster: '/media/pasa-promo-poster.jpg',
         autoPlay: true,
         muted: true,
