@@ -1,7 +1,7 @@
 import { BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold, useFonts } from '@expo-google-fonts/bricolage-grotesque';
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router } from 'expo-router';
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Animated, Easing, Linking, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type TextStyle } from 'react-native';
 import { Reveal, useCountUp, useReducedMotion, useRevealScroll } from '@/components/landing/Motion';
 import { PromoVideo } from '@/components/landing/PromoVideo';
@@ -55,25 +55,49 @@ const DARK: typeof LIGHT = {
 };
 
 type Palette = typeof LIGHT;
+type ColorKey = Exclude<keyof Palette, 'shadow'>;
+const COLOR_KEYS = Object.keys(LIGHT).filter((k) => k !== 'shadow') as ColorKey[];
 const INK_ON_LIGHT = '#10283D'; // text on fixed light surfaces (highlighter, pastel avatars)
-const PalCtx = createContext<Palette>(LIGHT);
+
+// On the web every color is a CSS variable (var(--l-paper) …). Switching modes only flips one attribute on the
+// page root; the browser animates the variables themselves, so nothing re-renders and the fade starts instantly.
+const IS_WEB = Platform.OS === 'web';
+const cssVar = (k: string) => `--l-${k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`;
+const VARS: Palette = { ...(Object.fromEntries(COLOR_KEYS.map((k) => [k, `var(${cssVar(k)})`])) as Record<ColorKey, string>), shadow: 0.15 };
+const FADE_MS = 400;
+const THEME_CSS = [
+  // Registered as colors so the variables can be transitioned (unsupported browsers just switch instantly).
+  ...COLOR_KEYS.map((k) => `@property ${cssVar(k)} { syntax: '<color>'; inherits: true; initial-value: ${LIGHT[k]}; }`),
+  `#landing-root { ${COLOR_KEYS.map((k) => `${cssVar(k)}: ${LIGHT[k]};`).join(' ')} }`,
+  `#landing-root[data-mode="dark"] { ${COLOR_KEYS.map((k) => `${cssVar(k)}: ${DARK[k]};`).join(' ')} }`,
+  `#landing-root[data-ready] { transition: ${COLOR_KEYS.map((k) => `${cssVar(k)} ${FADE_MS}ms ease`).join(', ')}; }`,
+  `@media (prefers-reduced-motion: reduce) { #landing-root[data-ready] { transition: none; } }`,
+].join('\n');
+
+/** Installs the theme stylesheet once and keeps the root's data-mode attribute in sync (web only). */
+function useLandingTheme(mode: Scheme) {
+  useLayoutEffect(() => {
+    if (!IS_WEB) return;
+    if (!document.getElementById('landing-theme')) {
+      const tag = document.createElement('style');
+      tag.id = 'landing-theme';
+      tag.textContent = THEME_CSS;
+      document.head.appendChild(tag);
+    }
+    const root = document.getElementById('landing-root');
+    if (!root) return;
+    root.setAttribute('data-mode', mode);
+    // Turn transitions on only after the first paint, so the page doesn't fade in from light on load.
+    if (!root.hasAttribute('data-ready')) requestAnimationFrame(() => root.setAttribute('data-ready', ''));
+  });
+}
+
+const PalCtx = createContext<Palette>(IS_WEB ? VARS : LIGHT);
 const usePal = () => useContext(PalCtx);
 const useStyles = () => {
   const P = usePal();
   return useMemo(() => makeStyles(P), [P]);
 };
-
-// On the web, colors fade instead of snapping when the palette changes.
-const TRANSITION_CSS = `#landing-root, #landing-root * { transition: background-color 450ms ease, color 450ms ease, border-color 450ms ease; }`;
-function useColorTransitions() {
-  useEffect(() => {
-    if (Platform.OS !== 'web' || document.getElementById('landing-transitions')) return;
-    const tag = document.createElement('style');
-    tag.id = 'landing-transitions';
-    tag.textContent = TRANSITION_CSS;
-    document.head.appendChild(tag);
-  }, []);
-}
 const H = 'BricolageGrotesque_800ExtraBold';
 const H7 = 'BricolageGrotesque_700Bold';
 const SCHOOL_NAMES = SCHOOLS.filter((s) => s !== 'Other');
@@ -81,7 +105,7 @@ const SCHOOL_NAMES = SCHOOLS.filter((s) => s !== 'Other');
 const FAQ = [
   ['Who can join PASA?', 'College students in Santa Rosa, Laguna. You sign up with your school, program and year, then upload your school ID and COR. The PASA team checks them before you can book, buy or sell.'],
   ['How do payments work?', 'You pay with GCash or Maya inside the app. PASA holds the money and only releases it to the tutor or seller after you confirm the session happened or you got the item. If it’s cancelled, you’re refunded.'],
-  ['Is tutoring online or face to face?', 'Both. Tutors choose what they offer. Online sessions run on Zoom, Google Meet or MS Teams (the tutor sends the link). In-person sessions happen wherever you both agree.'],
+  ['How does online tutoring work?', 'Every session is online. You pick Zoom, Google Meet or MS Teams when you book, your tutor sends the meeting link, and you join from your phone or laptop.'],
   ['What does it cost?', 'Signing up is free. A small service fee is added on top of the tutor’s rate or item price at checkout. PASA Plus members pay a lower fee.'],
   ['Can I sell reviewers or answer keys?', 'No. Assets is for books, calculators, supplies, lab and drafting tools, uniforms and gadgets. Listings with photos, and anything that looks like answer keys, exercises or quizzes, are checked by an admin first.'],
   ['How do I become a tutor?', 'Get verified, then apply from your profile with your subjects, rate and CV. Once approved, students can find and book you, and your earnings go to your PASA wallet.'],
@@ -98,9 +122,10 @@ export default function Landing() {
   const anchors = useRef<Record<string, number>>({});
   const theme = useTheme();
   const [mode, setMode] = useState<Scheme>(theme.scheme);
-  const P = mode === 'dark' ? DARK : LIGHT;
+  // Web: palette is CSS variables (constant), so toggling never rebuilds styles. Native: plain colors.
+  const P = IS_WEB ? VARS : mode === 'dark' ? DARK : LIGHT;
   const styles = useMemo(() => makeStyles(P), [P]);
-  useColorTransitions();
+  useLandingTheme(mode);
   const wide = width >= 980;
   const pad = wide ? 56 : 20;
 
@@ -177,7 +202,7 @@ export default function Landing() {
               Turn Potential Into <Text style={{ fontFamily: H7, fontSize: wide ? 26 : 21, color: INK_ON_LIGHT, backgroundColor: P.marker, paddingHorizontal: 4 }}>PASAbilities</Text>.
             </Text>
             <Text style={styles.lead}>
-              PASA is where students tutor students and trade the stuff school makes you buy. Book a tutor online or in person, sell or rent your old books and calculators, and pay safely with GCash or Maya.
+              PASA is where students tutor students and trade the stuff school makes you buy. Book a tutor for an online session, sell or rent your old books and calculators, and pay safely with GCash or Maya.
             </Text>
             <View style={{ flexDirection: 'row', gap: 18, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
               <Btn title="Create a free account" onPress={start} />
@@ -229,14 +254,14 @@ export default function Landing() {
               steps={[
                 ['Sign up and verify', 'Pick your school and program, then upload your school ID and COR.'],
                 ['Post or browse', 'Say what you’re stuck on, or browse tutors by subject. Search Assets for books and gear.'],
-                ['Book and pay', 'Choose online or in person, pay with GCash or Maya, then confirm when it’s done and leave a rating.'],
+                ['Book and pay', 'Pick a time and Zoom, Meet or Teams, pay with GCash or Maya, then confirm when it’s done and leave a rating.'],
               ]}
             />
             <Steps
               title="If you can help"
               steps={[
                 ['Apply to tutor', `Add your subjects, your rate (from ${peso(settings.min_tutor_rate)}/hour) and your CV.`],
-                ['Accept bookings', 'Students book a time. Add your Zoom, Meet or Teams link, or agree on a place.'],
+                ['Accept bookings', 'Students book a time. Send your Zoom, Meet or Teams link before the session.'],
                 ['Get paid', 'Once the student confirms, your earnings move to your wallet. Withdraw to GCash or Maya.'],
               ]}
             />
@@ -254,9 +279,9 @@ export default function Landing() {
           </Reveal>
           <Reveal distance={18} delay={120} style={{ flex: 1, width: '100%' }}>
             <View style={{ gap: 12 }}>
-              <TutorRow name="Miguel Reyes" meta="3rd year · BS Accountancy" subjects="Cost Accounting · Financial Accounting" rate={150} modes="Online / In person" rating="4.9" color="#B9E4F5" />
-              <TutorRow name="Bea Cruz" meta="4th year · BS Computer Science" subjects="Calculus · Statistics · Programming" rate={160} modes="Online" rating="5.0" color="#F7C6D9" />
-              <TutorRow name="Jon Villanueva" meta="4th year · BS Civil Engineering" subjects="Engineering Mechanics · Drafting" rate={180} modes="In person" rating="4.8" color="#C9F2D8" />
+              <TutorRow name="Miguel Reyes" meta="3rd year · BS Accountancy" subjects="Cost Accounting · Financial Accounting" rate={150} modes="Online · Zoom" rating="4.9" color="#B9E4F5" />
+              <TutorRow name="Bea Cruz" meta="4th year · BS Computer Science" subjects="Calculus · Statistics · Programming" rate={160} modes="Online · Google Meet" rating="5.0" color="#F7C6D9" />
+              <TutorRow name="Jon Villanueva" meta="4th year · BS Civil Engineering" subjects="Engineering Mechanics · Drafting" rate={180} modes="Online · MS Teams" rating="4.8" color="#C9F2D8" />
               <Text style={{ color: P.muted, fontSize: 13 }}>Sample profiles for illustration.</Text>
             </View>
           </Reveal>

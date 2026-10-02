@@ -73,7 +73,7 @@ export default function Activity() {
           <Empty
             icon="calendar-outline"
             title="No sessions yet"
-            text="Find a tutor from the Home tab and book a face-to-face session."
+            text="Find a tutor from the Home tab and book an online session."
             action={<Button title="Find tutors" small onPress={() => router.back()} />}
           />
         ) : (

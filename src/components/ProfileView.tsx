@@ -170,9 +170,7 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
             <Row>
               <Ionicons name="cash-outline" size={18} color={colors.primary} />
               <Text style={{ fontFamily: font.bold }}>{peso(p.tutor_rate)} / hour</Text>
-              <Text variant="muted">
-                · {(p.tutor_modes ?? ['in_person']).map((m) => (m === 'online' ? 'Online' : 'In person')).join(' or ')}
-              </Text>
+              <Text variant="muted">· Online via Zoom, Meet or Teams</Text>
             </Row>
             {isMe ? (
               <Button title="Edit tutor profile" variant="outline" small onPress={() => router.push('/become-tutor')} />

@@ -25,6 +25,7 @@ export type Profile = {
   last_seen_at: string | null;
 };
 
+// Tutoring is online only. 'in_person' remains only so older bookings still display.
 export type TutorMode = 'in_person' | 'online';
 export type Presence = 'online' | 'offline' | 'on_session';
 

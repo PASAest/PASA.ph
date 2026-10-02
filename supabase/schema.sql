@@ -228,7 +228,8 @@ alter table public.profiles add column if not exists id_doc_path text;
 alter table public.profiles add column if not exists cor_doc_path text;
 alter table public.profiles add column if not exists cv_doc_path text;
 alter table public.profiles add column if not exists tutor_status text not null default 'none';
-alter table public.profiles add column if not exists tutor_modes text[] not null default '{in_person}';
+alter table public.profiles add column if not exists tutor_modes text[] not null default '{online}';
+alter table public.profiles alter column tutor_modes set default '{online}';
 alter table public.profiles add column if not exists rejection_note text not null default '';
 alter table public.profiles add column if not exists plus_trial_used boolean not null default false;
 alter table public.profiles add column if not exists plus_boosts_left int not null default 0;
@@ -242,8 +243,10 @@ alter table public.profiles add constraint profiles_tutor_status_check
 -- Accounts that already tutor keep their tutor status.
 update public.profiles set tutor_status = 'approved' where is_tutor and tutor_status = 'none';
 
--- Online tutoring (Zoom / Google Meet / MS Teams) or in-person at a place the two agree on.
-alter table public.bookings add column if not exists mode text not null default 'in_person';
+-- Tutoring is online only (Zoom / Google Meet / MS Teams). 'in_person' stays valid for older bookings.
+alter table public.bookings add column if not exists mode text not null default 'online';
+alter table public.bookings alter column mode set default 'online';
+update public.profiles set tutor_modes = '{online}' where tutor_modes <> '{online}';
 alter table public.bookings add column if not exists platform text not null default '';
 alter table public.bookings add column if not exists meeting_link text not null default '';
 alter table public.bookings alter column location set default '';

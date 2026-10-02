@@ -105,8 +105,7 @@ export default function Approvals() {
                 ))}
               </Row>
               <Text>
-                <Text style={{ fontFamily: font.bold }}>{peso(p.tutor_rate)}/hr</Text> ·{' '}
-                {(p.tutor_modes ?? []).map((m) => (m === 'online' ? 'Online' : 'In person')).join(' / ')}
+                <Text style={{ fontFamily: font.bold }}>{peso(p.tutor_rate)}/hr</Text> · Online
               </Text>
               {!!p.tutor_about && <Text variant="muted">{p.tutor_about}</Text>}
               {docLinks(p, true)}

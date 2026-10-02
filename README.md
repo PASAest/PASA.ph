@@ -1,6 +1,6 @@
 # PASA · Turn Potential Into PASAbilities
 
-A student marketplace for college students in Santa Rosa, Laguna: **book tutors online or in person** and **buy, sell or rent academic items**. This is a working prototype for the feasibility study. It uses real accounts, a shared database and live chat, but **payments are dummy only**.
+A student marketplace for college students in Santa Rosa, Laguna: **book tutors online** and **buy, sell or rent academic items**. This is a working prototype for the feasibility study. It uses real accounts, a shared database and live chat, but **payments are dummy only**.
 
 Built with Expo (React Native) + Supabase. One codebase runs as an Android app, in Expo Go, and as an installable web app for iPhone.
 
@@ -139,7 +139,7 @@ Tip: to show the "Starts in 15 min" reminder, book a session for the next availa
 
 **Business rules**
 - Students sign up with their school, program and year, then upload their **school ID and COR**. They can browse right away, but booking, buying and selling unlock once an admin verifies them. Tutors also upload a **CV** and need admin approval.
-- Tutoring is **online** (Zoom, Google Meet or MS Teams; the tutor adds the meeting link) or **in person** at a place they agree on. Tutors set their own rate, with a minimum (default ₱150/hour).
+- Tutoring is **online only** (Zoom, Google Meet or MS Teams; the tutor adds the meeting link). Tutors set their own rate, with a minimum (default ₱150/hour).
 - Payment is **GCash or Maya** (dummy). The service fee (default 10%) is added on top. PASA Plus members pay 5 percentage points less.
 - Money goes into the tutor's or seller's **wallet** once the session or delivery is confirmed. They can request a withdrawal to GCash or Maya, which an admin marks as sent.
 - Item delivery is by **internal arrangement** in chat.

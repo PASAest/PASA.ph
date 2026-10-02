@@ -1,10 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
 import { DocUpload } from '@/components/DocUpload';
 import { Screen } from '@/components/Screen';
 import { Select } from '@/components/Select';
-import { Badge, Button, Card, Chip, Field, Row, Text } from '@/components/ui';
+import { Badge, Button, Card, Field, Row, Text } from '@/components/ui';
 import { SUBJECTS } from '@/config';
 import { confirm, notify } from '@/lib/actions';
 import { requireVerified, useMe } from '@/lib/auth';
@@ -12,7 +11,6 @@ import { peso } from '@/lib/format';
 import { checkText } from '@/lib/moderation';
 import { useSettings } from '@/lib/settings';
 import { supabase } from '@/lib/supabase';
-import type { TutorMode } from '@/lib/types';
 import { uploadDocument, type Picked } from '@/lib/upload';
 import { colors } from '@/theme';
 
@@ -31,18 +29,14 @@ export default function BecomeTutor() {
   const [subjects, setSubjects] = useState<string[]>(me.tutor_subjects);
   const [rate, setRate] = useState(String(me.tutor_rate || settings.min_tutor_rate));
   const [about, setAbout] = useState(me.tutor_about);
-  const [modes, setModes] = useState<TutorMode[]>(me.tutor_modes?.length ? me.tutor_modes : ['in_person', 'online']);
   const [cv, setCv] = useState<Picked | null>(null);
   const [saving, setSaving] = useState(false);
   const approved = me.tutor_status === 'approved';
   const leave = () => (setup ? router.replace('/(tabs)') : router.back());
 
-  const toggleMode = (m: TutorMode) => setModes((cur) => (cur.includes(m) ? cur.filter((x) => x !== m) : [...cur, m]));
-
   const save = async () => {
     if (!approved && !requireVerified(me)) return;
     if (!subjects.length) return notify('Pick at least one subject');
-    if (!modes.length) return notify('Choose online, in-person, or both');
     if (!rate || Number(rate) < settings.min_tutor_rate) return notify('Set your hourly rate', `The minimum is ${peso(settings.min_tutor_rate)} per hour.`);
     const check = checkText(about);
     if (!check.ok) return notify('Please edit your intro', check.reason);
@@ -56,7 +50,7 @@ export default function BecomeTutor() {
           tutor_subjects: subjects,
           tutor_rate: Number(rate),
           tutor_about: about.trim(),
-          tutor_modes: modes,
+          tutor_modes: ['online'],
           cv_doc_path,
           ...(approved ? { is_tutor: true } : { tutor_status: 'pending' }),
         })
@@ -104,16 +98,9 @@ export default function BecomeTutor() {
         </Card>
       )}
       <Text variant="muted">
-        Tutor online through Zoom, Google Meet or MS Teams, or in person at a place you and the student agree on. Students pay through PASA and you get your full rate.
+        Tutoring on PASA is online, through Zoom, Google Meet or MS Teams. Students pay through PASA and you get your full rate.
       </Text>
       <Select label="Subjects you can teach" options={SUBJECTS} value={subjects} onChange={setSubjects} multiple icon="book-outline" />
-      <View style={{ gap: 8 }}>
-        <Text variant="label">How do you tutor?</Text>
-        <Row>
-          <Chip label="Online" icon="videocam-outline" selected={modes.includes('online')} onPress={() => toggleMode('online')} />
-          <Chip label="In person" icon="people-outline" selected={modes.includes('in_person')} onPress={() => toggleMode('in_person')} />
-        </Row>
-      </View>
       <Field
         label={`Rate per hour (minimum ${peso(settings.min_tutor_rate)})`}
         placeholder={String(settings.min_tutor_rate)}

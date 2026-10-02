@@ -134,7 +134,7 @@ function TutorRow({ tutor, status }: { tutor: Profile; status?: Presence }) {
           {peso(tutor.tutor_rate)}/hr
           <Text variant="muted">
             {' · '}
-            {(tutor.tutor_modes ?? ['in_person']).map((m) => (m === 'online' ? 'Online' : 'In person')).join(' / ')}
+            Online
             {status ? ` · ${PRESENCE_LABEL[status]}` : ''}
           </Text>
         </Text>
