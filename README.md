@@ -70,6 +70,16 @@ On an iPhone, open the link in **Safari** → **Share** → **Add to Home Screen
 
 ---
 
+### Web link on Vercel (any laptop or phone browser)
+The project includes `vercel.json`, which sets the build command, the output folder and the rewrites that make links like `/admin` work.
+
+1. Create a project on [vercel.com](https://vercel.com). Either import the GitHub repo, or run `npx vercel` inside `pasa-app`.
+2. In **Settings → Environment Variables**, add `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, with the same values as your `.env`. Don't add `SEED_PASSWORD`.
+3. Deploy. Every push to `main` redeploys automatically, or run `npx vercel --prod` from your laptop.
+4. Put the Vercel URL in Supabase → **Authentication → URL Configuration → Site URL**, so password-reset links work.
+
+`.vercelignore` keeps `.env` from ever being uploaded.
+
 ## Admin panel
 
 A web panel for the PASA team at **`/admin`**: `http://localhost:8081/admin` while developing, or `https://your-site.netlify.app/admin` once deployed.
