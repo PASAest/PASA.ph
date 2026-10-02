@@ -13,6 +13,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PhoneFrame } from '@/components/PhoneFrame';
 import { SetupNeeded } from '@/components/SetupNeeded';
 import { AuthProvider } from '@/lib/auth';
+import { SettingsProvider } from '@/lib/settings';
+import { ThemeProvider } from '@/lib/themeMode';
 import { isConfigured } from '@/lib/supabase';
 import { colors } from '@/theme';
 
@@ -29,16 +31,24 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" />
-      {isConfigured ? (
-        <AuthProvider>
-          <PhoneFrame>
-            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
-          </PhoneFrame>
-        </AuthProvider>
-      ) : (
-        <SetupNeeded />
-      )}
+      <ThemeProvider>
+        {(scheme) => (
+          <>
+            <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+            {isConfigured ? (
+              <SettingsProvider>
+                <AuthProvider>
+                  <PhoneFrame>
+                    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
+                  </PhoneFrame>
+                </AuthProvider>
+              </SettingsProvider>
+            ) : (
+              <SetupNeeded />
+            )}
+          </>
+        )}
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

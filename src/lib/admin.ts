@@ -15,6 +15,9 @@ export type AdminUser = {
   banned: boolean;
   ban_reason: string;
   is_admin: boolean;
+  school: string;
+  verification_status: string;
+  tutor_status: string;
 };
 
 /** Asks for a short text answer. Web uses the browser prompt; native falls back to the default. */

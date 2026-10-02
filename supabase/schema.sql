@@ -218,6 +218,85 @@ create table if not exists public.notifications (
 );
 
 -- ─────────────────────────────────────────────────────────────
+-- v2 amendments (group meeting): verification, online tutoring, more asset
+-- categories, wallet, PASA Plus plans, chat attachments, status, admin settings
+-- ─────────────────────────────────────────────────────────────
+-- Student verification (ID + COR) and tutor approval (ID + COR + CV), reviewed by admins.
+-- Document paths point into the private "documents" storage bucket.
+alter table public.profiles add column if not exists verification_status text not null default 'unverified';
+alter table public.profiles add column if not exists id_doc_path text;
+alter table public.profiles add column if not exists cor_doc_path text;
+alter table public.profiles add column if not exists cv_doc_path text;
+alter table public.profiles add column if not exists tutor_status text not null default 'none';
+alter table public.profiles add column if not exists tutor_modes text[] not null default '{in_person}';
+alter table public.profiles add column if not exists rejection_note text not null default '';
+alter table public.profiles add column if not exists plus_trial_used boolean not null default false;
+alter table public.profiles add column if not exists plus_boosts_left int not null default 0;
+alter table public.profiles add column if not exists last_seen_at timestamptz;
+alter table public.profiles drop constraint if exists profiles_verification_status_check;
+alter table public.profiles add constraint profiles_verification_status_check
+  check (verification_status in ('unverified', 'pending', 'verified', 'rejected'));
+alter table public.profiles drop constraint if exists profiles_tutor_status_check;
+alter table public.profiles add constraint profiles_tutor_status_check
+  check (tutor_status in ('none', 'pending', 'approved', 'rejected'));
+-- Accounts that already tutor keep their tutor status.
+update public.profiles set tutor_status = 'approved' where is_tutor and tutor_status = 'none';
+
+-- Online tutoring (Zoom / Google Meet / MS Teams) or in-person at a place the two agree on.
+alter table public.bookings add column if not exists mode text not null default 'in_person';
+alter table public.bookings add column if not exists platform text not null default '';
+alter table public.bookings add column if not exists meeting_link text not null default '';
+alter table public.bookings alter column location set default '';
+alter table public.bookings drop constraint if exists bookings_mode_check;
+alter table public.bookings add constraint bookings_mode_check check (mode in ('in_person', 'online'));
+
+-- More academic item categories; photo listings wait for admin approval.
+alter table public.listings drop constraint if exists listings_category_check;
+alter table public.listings add constraint listings_category_check
+  check (category in ('book', 'calculator', 'school_supplies', 'lab_equipment', 'drafting_tools', 'uniform', 'gadget'));
+alter table public.listings drop constraint if exists listings_status_check;
+alter table public.listings add constraint listings_status_check
+  check (status in ('pending_review', 'available', 'reserved', 'on_loan', 'sold', 'rejected'));
+alter table public.listings add column if not exists review_note text not null default '';
+
+-- What the tutor or seller actually earns from a payment (amount minus fee and deposit).
+alter table public.payments add column if not exists payee_amount int;
+
+-- Photo and video attachments in chat (stored in the private "chat" bucket).
+alter table public.messages add column if not exists attachment_path text;
+alter table public.messages add column if not exists attachment_type text;
+alter table public.messages alter column body set default '';
+
+-- Tutor/seller wallet withdrawals (demo: admins mark them as paid).
+create table if not exists public.payouts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles on delete cascade,
+  amount int not null check (amount > 0),
+  method text not null check (method in ('gcash', 'maya')),
+  account_name text not null,
+  account_number text not null,
+  status text not null default 'requested' check (status in ('requested', 'paid', 'rejected')),
+  created_at timestamptz not null default now()
+);
+
+-- One row of settings the admin can change from the panel.
+create table if not exists public.app_settings (
+  id int primary key default 1 check (id = 1),
+  commission_rate numeric not null default 10,     -- % added on top of the tutor's/seller's price
+  plus_discount numeric not null default 5,        -- percentage points off the fee for PASA Plus
+  min_tutor_rate int not null default 150,         -- PHP per hour
+  boost_price int not null default 20,
+  boost_days int not null default 3,
+  plus_boosts int not null default 10,             -- boosts included per Plus period
+  plus_price_1m int not null default 49,
+  plus_price_3m int not null default 129,
+  plus_price_6m int not null default 239,
+  plus_price_12m int not null default 449,
+  updated_at timestamptz not null default now()
+);
+insert into public.app_settings (id) values (1) on conflict do nothing;
+
+-- ─────────────────────────────────────────────────────────────
 -- Admins and bans (managed from the /admin web panel)
 -- ─────────────────────────────────────────────────────────────
 -- Add an admin from the SQL Editor:
@@ -245,24 +324,123 @@ returns boolean language sql stable security definer set search_path = public as
 $$;
 
 -- Users list for the admin panel, including email and last sign-in from auth.users.
+drop function if exists public.admin_list_users();
 create or replace function public.admin_list_users()
 returns table (
   id uuid, email text, first_name text, last_name text, program text, year_level int,
   is_tutor boolean, plus_until timestamptz, created_at timestamptz, last_sign_in_at timestamptz,
-  banned boolean, ban_reason text, is_admin boolean
+  banned boolean, ban_reason text, is_admin boolean, school text, verification_status text, tutor_status text
 ) language plpgsql stable security definer set search_path = public as $$
 begin
   if not is_admin() then raise exception 'admins only'; end if;
   return query
     select p.id, u.email::text, p.first_name, p.last_name, p.program, p.year_level,
            p.is_tutor, p.plus_until, p.created_at, u.last_sign_in_at,
-           b.user_id is not null, coalesce(b.reason, ''), a.user_id is not null
+           b.user_id is not null, coalesce(b.reason, ''), a.user_id is not null,
+           p.school, p.verification_status, p.tutor_status
     from profiles p
     join auth.users u on u.id = p.id
     left join bans b on b.user_id = p.id
     left join admins a on a.user_id = p.id
     order by p.created_at desc;
 end $$;
+
+-- Online / offline / on session for a list of users (green dot in chat and profiles).
+create or replace function public.user_statuses(ids uuid[])
+returns table (id uuid, status text) language sql stable security definer set search_path = public as $$
+  select p.id,
+    case
+      when exists (
+        select 1 from bookings b
+        where b.status = 'paid' and p.id in (b.student_id, b.tutor_id)
+          and now() between b.starts_at and b.starts_at + make_interval(mins => b.duration_min)
+      ) then 'on_session'
+      when p.last_seen_at > now() - interval '2 minutes' then 'online'
+      else 'offline'
+    end
+  from profiles p where p.id = any(ids);
+$$;
+
+-- Students can't approve themselves: only admins change verification, tutor approval or ban-related fields.
+create or replace function public.guard_profile()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  -- auth.uid() is null in the SQL Editor and seed scripts run by the project owner.
+  if auth.uid() is null or is_admin() then return new; end if;
+  if new.verification_status is distinct from old.verification_status
+     and not (new.verification_status = 'pending' and old.verification_status in ('unverified', 'rejected')) then
+    raise exception 'Only admins can change verification status';
+  end if;
+  if new.tutor_status is distinct from old.tutor_status
+     and not (new.tutor_status = 'pending' or (new.tutor_status = 'none' and old.tutor_status <> 'none')) then
+    raise exception 'Only admins can approve tutors';
+  end if;
+  -- is_tutor follows tutor_status: you're listed as a tutor only once approved.
+  if new.is_tutor and new.tutor_status <> 'approved' then new.is_tutor := false; end if;
+  return new;
+end $$;
+drop trigger if exists profiles_guard on public.profiles;
+create trigger profiles_guard before update on public.profiles
+  for each row execute function public.guard_profile();
+
+-- Listings with a photo wait for an admin to check them (no answer keys, quizzes, etc.).
+create or replace function public.guard_listing()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  -- auth.uid() is null in the SQL Editor and seed scripts run by the project owner.
+  if auth.uid() is null or is_admin() then return new; end if;
+  if tg_op = 'INSERT' then
+    if new.photo_url is not null and new.status = 'available' then new.status := 'pending_review'; end if;
+  elsif new.photo_url is distinct from old.photo_url and new.photo_url is not null then
+    new.status := 'pending_review';
+  elsif new.status is distinct from old.status and new.status = 'available' and old.status in ('pending_review', 'rejected') then
+    raise exception 'Only admins can approve listings';
+  end if;
+  return new;
+end $$;
+drop trigger if exists listings_guard on public.listings;
+create trigger listings_guard before insert or update on public.listings
+  for each row execute function public.guard_listing();
+
+-- Notify the student/tutor when an admin reviews them, and sellers when a listing is reviewed.
+create or replace function public.on_profile_review()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.verification_status is distinct from old.verification_status and new.verification_status in ('verified', 'rejected') then
+    perform notify(new.id,
+      case when new.verification_status = 'verified' then 'You''re verified! 🎉' else 'Verification needs another look' end,
+      case when new.verification_status = 'verified' then 'You can now book tutors, buy, and sell on PASA.'
+           else coalesce(nullif(new.rejection_note, ''), 'Please re-upload a clear ID and COR.') end,
+      '/settings');
+  end if;
+  if new.tutor_status is distinct from old.tutor_status and new.tutor_status in ('approved', 'rejected') then
+    perform notify(new.id,
+      case when new.tutor_status = 'approved' then 'You''re now a PASA tutor!' else 'Tutor application not approved' end,
+      case when new.tutor_status = 'approved' then 'Students can now find and book you.'
+           else coalesce(nullif(new.rejection_note, ''), 'Check your documents and apply again.') end,
+      '/become-tutor');
+  end if;
+  return new;
+end $$;
+drop trigger if exists profiles_after_review on public.profiles;
+create trigger profiles_after_review after update on public.profiles
+  for each row execute function public.on_profile_review();
+
+create or replace function public.on_listing_review()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if old.status = 'pending_review' and new.status in ('available', 'rejected') then
+    perform notify(new.seller_id,
+      case when new.status = 'available' then 'Listing approved' else 'Listing not approved' end,
+      case when new.status = 'available' then '"' || new.title || '" is now live in Assets.'
+           else '"' || new.title || '": ' || coalesce(nullif(new.review_note, ''), 'it breaks the Assets rules.') end,
+      '/listing/' || new.id);
+  end if;
+  return new;
+end $$;
+drop trigger if exists listings_after_review on public.listings;
+create trigger listings_after_review after update on public.listings
+  for each row execute function public.on_listing_review();
 
 -- Average ratings per user and role
 create or replace view public.profile_ratings with (security_invoker = true) as
@@ -301,10 +479,13 @@ create or replace function public.on_message()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare c conversations; recipient uuid;
 begin
-  update conversations set last_message = left(new.body, 120), last_message_at = new.created_at
+  update conversations
+    set last_message = case when new.body <> '' then left(new.body, 120)
+                            when new.attachment_type = 'video' then '🎬 Video' else '📷 Photo' end,
+        last_message_at = new.created_at
     where id = new.conversation_id returning * into c;
   recipient := case when c.user_a = new.sender_id then c.user_b else c.user_a end;
-  perform notify(recipient, display_name(new.sender_id) || ' sent you a message', left(new.body, 80), '/chat/' || c.id);
+  perform notify(recipient, display_name(new.sender_id) || ' sent you a message', c.last_message, '/chat/' || c.id);
   return new;
 end $$;
 drop trigger if exists messages_after_insert on public.messages;
@@ -325,7 +506,8 @@ begin
       perform notify(new.student_id, 'Booking declined', display_name(new.tutor_id) || ' can''t make it this time.', '/activity');
     elsif new.status = 'paid' then
       perform notify(new.tutor_id, 'Session confirmed',
-        display_name(new.student_id) || ' paid. Meet at ' || new.location || '.', '/activity');
+        display_name(new.student_id) || ' paid. ' ||
+        case when new.mode = 'online' then 'Online via ' || new.platform || '.' else 'Meet at ' || new.location || '.' end, '/activity');
     elsif new.status = 'completed' then
       perform notify(new.tutor_id, 'Payment released',
         'PHP ' || new.amount || ' for ' || new.subject || ' is now yours. Leave a review!', '/activity');
@@ -348,7 +530,7 @@ begin
   if tg_op = 'INSERT' then
     update listings set status = case when new.kind = 'rent' then 'on_loan' else 'reserved' end where id = new.listing_id;
     perform notify(new.seller_id, case when new.kind = 'rent' then 'Your item was rented' else 'Your item was bought' end,
-      display_name(new.buyer_id) || ' paid for "' || t || '". Arrange the meetup in chat.', '/activity');
+      display_name(new.buyer_id) || ' paid for "' || t || '". Arrange delivery in chat.', '/activity');
   elsif new.status <> old.status then
     if new.status = 'completed' and new.kind = 'buy' then
       update listings set status = 'sold' where id = new.listing_id;
@@ -417,6 +599,8 @@ alter table public.reports enable row level security;
 alter table public.notifications enable row level security;
 alter table public.admins enable row level security;
 alter table public.bans enable row level security;
+alter table public.payouts enable row level security;
+alter table public.app_settings enable row level security;
 
 do $$ declare r record; begin
   for r in select policyname, tablename from pg_policies where schemaname = 'public' loop
@@ -428,7 +612,8 @@ end $$;
 create policy "read" on public.profiles for select to authenticated using (true);
 create policy "read" on public.posts for select to authenticated using (true);
 create policy "read" on public.comments for select to authenticated using (true);
-create policy "read" on public.listings for select to authenticated using (true);
+create policy "read" on public.listings for select to authenticated
+  using (status not in ('pending_review', 'rejected') or seller_id = auth.uid() or is_admin());
 create policy "read" on public.reviews for select to authenticated using (true);
 create policy "read" on public.connections for select to authenticated using (true);
 
@@ -468,6 +653,13 @@ create policy "members send" on public.messages for insert to authenticated with
   sender_id = auth.uid() and not is_banned()
   and exists (select 1 from conversations c where c.id = conversation_id and auth.uid() in (c.user_a, c.user_b)));
 
+-- Wallet withdrawals and settings
+create policy "own or admin" on public.payouts for select to authenticated using (user_id = auth.uid() or is_admin());
+create policy "own" on public.payouts for insert to authenticated with check (user_id = auth.uid() and not is_banned());
+create policy "admin update" on public.payouts for update to authenticated using (is_admin());
+create policy "read" on public.app_settings for select using (true);
+create policy "admin update" on public.app_settings for update to authenticated using (is_admin());
+
 -- Admin panel: read everything except private chats, moderate content, manage bans
 create policy "self" on public.admins for select to authenticated using (user_id = auth.uid());
 create policy "own or admin" on public.bans for select to authenticated using (user_id = auth.uid() or is_admin());
@@ -481,6 +673,9 @@ create policy "admin" on public.payments for select to authenticated using (is_a
 create policy "admin delete" on public.posts for delete to authenticated using (is_admin());
 create policy "admin delete" on public.comments for delete to authenticated using (is_admin());
 create policy "admin delete" on public.listings for delete to authenticated using (is_admin());
+create policy "admin update" on public.listings for update to authenticated using (is_admin());
+create policy "admin update" on public.profiles for update to authenticated using (is_admin());
+create policy "admin update" on public.payments for update to authenticated using (is_admin());
 
 -- ─────────────────────────────────────────────────────────────
 -- Realtime (live chat and notification badge)
@@ -490,6 +685,9 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 do $$ begin
   alter publication supabase_realtime add table public.notifications;
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.bans;
 exception when duplicate_object then null; end $$;
 
 -- ─────────────────────────────────────────────────────────────
@@ -506,3 +704,30 @@ create policy "photos upload own" on storage.objects for insert to authenticated
   with check (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);
 create policy "photos update own" on storage.objects for update to authenticated
   using (bucket_id = 'photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Private: verification documents (ID, COR, CV). Owner uploads into their folder; only owner and admins can view.
+insert into storage.buckets (id, name, public) values ('documents', 'documents', false)
+  on conflict (id) do nothing;
+drop policy if exists "documents upload own" on storage.objects;
+drop policy if exists "documents update own" on storage.objects;
+drop policy if exists "documents read own or admin" on storage.objects;
+create policy "documents upload own" on storage.objects for insert to authenticated
+  with check (bucket_id = 'documents' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "documents update own" on storage.objects for update to authenticated
+  using (bucket_id = 'documents' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "documents read own or admin" on storage.objects for select to authenticated
+  using (bucket_id = 'documents' and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin()));
+
+-- Private: chat photos and videos, stored under the conversation id; only its two members can read or upload.
+insert into storage.buckets (id, name, public) values ('chat', 'chat', false)
+  on conflict (id) do nothing;
+drop policy if exists "chat members upload" on storage.objects;
+drop policy if exists "chat members read" on storage.objects;
+create policy "chat members upload" on storage.objects for insert to authenticated
+  with check (bucket_id = 'chat' and exists (
+    select 1 from public.conversations c
+    where c.id::text = (storage.foldername(name))[1] and auth.uid() in (c.user_a, c.user_b)));
+create policy "chat members read" on storage.objects for select to authenticated
+  using (bucket_id = 'chat' and exists (
+    select 1 from public.conversations c
+    where c.id::text = (storage.foldername(name))[1] and auth.uid() in (c.user_a, c.user_b)));

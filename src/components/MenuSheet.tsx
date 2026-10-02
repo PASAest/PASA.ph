@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radius, space } from '@/theme';
+import { colors, radius, space, themed } from '@/theme';
 import { Text, type IconName } from './ui';
 
 export type MenuItem = { label: string; icon: IconName; onPress: () => void; danger?: boolean };
@@ -40,8 +40,8 @@ export function MenuSheet({ visible, onClose, items }: { visible: boolean; onClo
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(22,50,74,0.35)', justifyContent: 'flex-end' },
-  sheet: { width: '100%', maxWidth: 430, alignSelf: 'center', backgroundColor: colors.white, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, paddingTop: space(2) },
+const styles = themed(() => StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' },
+  sheet: { width: '100%', maxWidth: 430, alignSelf: 'center', backgroundColor: colors.surface, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, paddingTop: space(2) },
   item: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: space(5), paddingVertical: space(4) },
-});
+}));

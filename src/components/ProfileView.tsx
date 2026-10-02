@@ -5,12 +5,14 @@ import { StyleSheet, View } from 'react-native';
 import { confirm, notify, openChat } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
 import { fullName, isPlus, peso, shortDate, yearLabel } from '@/lib/format';
+import { PRESENCE_LABEL, useStatuses } from '@/lib/presence';
 import { supabase } from '@/lib/supabase';
 import type { Listing, Profile, Rating, Review } from '@/lib/types';
 import { useFocusLoad } from '@/lib/useFocusLoad';
-import { colors, font, space } from '@/theme';
+import { colors, font, space, themed } from '@/theme';
 import { ListingCard } from './ListingCard';
 import { MenuSheet } from './MenuSheet';
+import { StatusDot } from './StatusDot';
 import { Avatar, Badge, Button, Card, Empty, Loading, Row, Stars, Text } from './ui';
 
 type Data = {
@@ -52,6 +54,7 @@ export function useProfileData(userId: string) {
 export function ProfileView({ data, reload }: { data: Data | null; reload: () => Promise<void> }) {
   const { me } = useMe();
   const [menu, setMenu] = useState(false);
+  const statuses = useStatuses([data?.profile.id]);
   if (!data) return <Loading />;
   const { profile: p, ratings, reviews, listings, connections, connected } = data;
   const isMe = p.id === me.id;
@@ -79,7 +82,11 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
           <View style={{ flex: 1, gap: 4 }}>
             <Text variant="h2">{fullName(p)}</Text>
             <Row style={{ flexWrap: 'wrap' }} gap={6}>
-              <Badge label="Verified student" tone="green" icon="shield-checkmark" />
+              {p.verification_status === 'verified' ? (
+                <Badge label="Verified student" tone="green" icon="shield-checkmark" />
+              ) : (
+                <Badge label="Not verified" tone="gray" />
+              )}
               {p.is_tutor && <Badge label="Tutor" tone="blue" icon="school" />}
               {isPlus(p) && <Badge label="PASA Plus" tone="yellow" icon="star" />}
             </Row>
@@ -87,8 +94,16 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
               {yearLabel(p.year_level)} · {p.program}
             </Text>
             <Text variant="muted">{p.school}</Text>
+            {statuses[p.id] && (
+              <Text variant="muted" style={{ fontSize: 12.5 }}>
+                ● {PRESENCE_LABEL[statuses[p.id]]}
+              </Text>
+            )}
           </View>
-          <Avatar profile={p} size={84} />
+          <View>
+            <Avatar profile={p} size={84} />
+            <StatusDot status={statuses[p.id]} size={18} />
+          </View>
         </Row>
         {!!p.bio && <Text style={{ lineHeight: 21 }}>{p.bio}</Text>}
         <Text variant="muted">
@@ -97,7 +112,7 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
         {isMe ? (
           <Row>
             <Button title="Edit profile" icon="create-outline" small style={{ flex: 1 }} onPress={() => router.push('/edit-profile')} />
-            <Button title="Activity" icon="calendar-outline" variant="outline" small style={{ flex: 1 }} onPress={() => router.push('/activity')} />
+            <Button title="Wallet" icon="wallet-outline" variant="outline" small style={{ flex: 1 }} onPress={() => router.push('/wallet')} />
             <Button title="" icon="settings-outline" variant="outline" small onPress={() => router.push('/settings')} />
           </Row>
         ) : (
@@ -155,7 +170,9 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
             <Row>
               <Ionicons name="cash-outline" size={18} color={colors.primary} />
               <Text style={{ fontFamily: font.bold }}>{peso(p.tutor_rate)} / hour</Text>
-              <Text variant="muted">· Face-to-face on campus</Text>
+              <Text variant="muted">
+                · {(p.tutor_modes ?? ['in_person']).map((m) => (m === 'online' ? 'Online' : 'In person')).join(' or ')}
+              </Text>
             </Row>
             {isMe ? (
               <Button title="Edit tutor profile" variant="outline" small onPress={() => router.push('/become-tutor')} />
@@ -165,8 +182,12 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
           </>
         ) : isMe ? (
           <>
-            <Text variant="muted">Share what you're good at and earn by tutoring classmates.</Text>
-            <Button title="Become a tutor" icon="school-outline" small onPress={() => router.push('/become-tutor')} />
+            <Text variant="muted">
+              {p.tutor_status === 'pending'
+                ? 'Your tutor application is being reviewed by the PASA team.'
+                : "Share what you're good at and earn by tutoring classmates."}
+            </Text>
+            <Button title={p.tutor_status === 'pending' ? 'View application' : 'Become a tutor'} icon="school-outline" small onPress={() => router.push('/become-tutor')} />
           </>
         ) : (
           <Text variant="muted">{p.first_name} doesn't offer tutoring yet.</Text>
@@ -229,7 +250,7 @@ function RatingBlock({ label, rating }: { label: string; rating: Rating }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   review: { gap: 4, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: space(3) },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: space(3) },
-});
+}));

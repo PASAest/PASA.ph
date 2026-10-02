@@ -11,7 +11,7 @@ const FLIRTY_PHRASES = [
   'send pics', 'send pic', 'kiss', 'miss na kita', 'love you', 'iloveyou', 'i love you',
 ];
 
-// Assets may only be books and calculators — no answer keys, exercises, practice sets or quizzes.
+// Academic items with answer keys, exercises, practice sets or quizzes need admin approval.
 const BANNED_ITEM_TERMS = [
   'answer key', 'answers', 'answer sheet', 'solution manual', 'solutions manual', 'solutions', 'exercise',
   'exercises', 'practice set', 'practice sets', 'quiz', 'quizzes', 'reviewer', 'test bank', 'leaked',
@@ -25,10 +25,16 @@ const findTerm = (text: string, terms: string[]) => {
   return terms.find((w) => t.includes(` ${w} `));
 };
 
+// Links are blocked so deals and payments stay inside PASA (meeting links on bookings are the one exception).
+const LINK = /(https?:\/\/|www\.)\S+|\b[a-z0-9-]+\.(com|net|org|ph|io|me|ly|gg|link|xyz|co|app|site|info|biz|to|tk)\b(\/\S*)?/i;
+
 export type ModerationResult = { ok: true } | { ok: false; reason: string };
 
-/** Checks chat messages, posts and comments. */
+/** Checks chat messages, posts, comments, bios and reviews. */
 export function checkText(text: string): ModerationResult {
+  if (LINK.test(text)) {
+    return { ok: false, reason: 'Links aren\'t allowed on PASA. Keep chats, deals and payments in the app.' };
+  }
   if (findTerm(text, HARSH_WORDS)) {
     return { ok: false, reason: 'Your message has harsh or offensive words. Please keep PASA respectful.' };
   }
@@ -38,16 +44,15 @@ export function checkText(text: string): ModerationResult {
   return { ok: true };
 }
 
-/** Checks a new Assets listing against the books-and-calculators-only rule. */
-export function checkListing(title: string, description: string): ModerationResult {
+export type ListingCheck = ModerationResult & { needsReview?: string };
+
+/**
+ * Checks a new Assets listing. Offensive words and links are blocked. Possible answer keys, exercises,
+ * practice sets or quizzes aren't blocked outright: the listing goes to an admin for approval.
+ */
+export function checkListing(title: string, description: string): ListingCheck {
   const text = checkText(`${title} ${description}`);
   if (!text.ok) return text;
-  const banned = findTerm(`${title} ${description}`, BANNED_ITEM_TERMS);
-  if (banned) {
-    return {
-      ok: false,
-      reason: `"${banned}" isn't allowed. Only books and calculators can be listed — no answer keys, exercises, practice sets, quizzes or reviewers.`,
-    };
-  }
-  return { ok: true };
+  const flagged = findTerm(`${title} ${description}`, BANNED_ITEM_TERMS);
+  return flagged ? { ok: true, needsReview: `mentions "${flagged}"` } : { ok: true };
 }

@@ -5,31 +5,40 @@ import { Pressable, View } from 'react-native';
 import { FakeWallet, METHODS, type PayMethod } from '@/components/FakeWallet';
 import { Screen } from '@/components/Screen';
 import { Button, Card, ChipSelect, DemoBanner, Divider, Loading, Row, Text } from '@/components/ui';
-import { BOOST_DAYS, BOOST_PRICE, PLUS_PRICE } from '@/config';
 import { notify } from '@/lib/actions';
-import { useMe } from '@/lib/auth';
-import { dateTime, daysFromNow, fullName, peso, referenceNo, serviceFee } from '@/lib/format';
+import { requireVerified, useMe } from '@/lib/auth';
+import { dateTime, daysFromNow, extendFrom, fullName, isPlus, peso, referenceNo } from '@/lib/format';
+import { PLUS_PLANS, serviceFee, useSettings } from '@/lib/settings';
 import { supabase } from '@/lib/supabase';
 import type { Booking, Listing } from '@/lib/types';
 import { colors, font, radius } from '@/theme';
 
-type Params = { type: 'booking' | 'extend' | 'order' | 'boost' | 'plus'; id?: string; listingId?: string; target?: 'post' | 'listing' };
+type Params = {
+  type: 'booking' | 'extend' | 'order' | 'boost' | 'plus';
+  id?: string;
+  listingId?: string;
+  target?: 'post' | 'listing';
+  months?: string;
+};
 
 type Summary = {
   title: string;
   subtitle: string;
   lines: { label: string; amount: number }[];
+  fee: number;
+  /** What the tutor/seller receives; null when the money goes to PASA (boost, Plus). */
+  payeeAmount: number | null;
   payeeId: string | null;
   refType: 'booking' | 'order' | 'boost' | 'plus';
-  allowCash: boolean;
 };
 
 const WEEKS = [1, 2, 3, 4];
 
-// 3.7 · Checkout with dummy e-wallet payment
+// 3.7 · Checkout with dummy GCash / Maya payment
 export default function Checkout() {
   const params = useLocalSearchParams<Params>();
   const { me, refreshProfile } = useMe();
+  const { settings } = useSettings();
   const [booking, setBooking] = useState<Booking | null>(null);
   const [listing, setListing] = useState<Listing | null>(null);
   const [weeks, setWeeks] = useState(1);
@@ -51,73 +60,80 @@ export default function Checkout() {
         if (!booking) return null;
         return {
           title: `${booking.subject} with ${fullName(booking.tutor)}`,
-          subtitle: `${dateTime(booking.starts_at)} · ${booking.location}`,
+          subtitle: `${dateTime(booking.starts_at)} · ${booking.mode === 'online' ? `Online via ${booking.platform}` : booking.location}`,
           lines: [
             { label: `Tutor fee (${booking.duration_min / 60} hr)`, amount: booking.amount },
             { label: 'PASA service fee', amount: booking.fee },
           ],
+          fee: booking.fee,
+          payeeAmount: booking.amount,
           payeeId: booking.tutor_id,
           refType: 'booking',
-          allowCash: true,
         };
       }
       case 'extend': {
         if (!booking) return null;
         const extra = Math.round((booking.amount * 30) / booking.duration_min);
+        const fee = serviceFee(extra, settings, me);
         return {
           title: `Extend ${booking.subject} by 30 minutes`,
-          subtitle: `With ${fullName(booking.tutor)} · ${booking.location}`,
+          subtitle: `With ${fullName(booking.tutor)}`,
           lines: [
             { label: 'Extra 30 minutes', amount: extra },
-            { label: 'PASA service fee', amount: serviceFee(extra, me) },
+            { label: 'PASA service fee', amount: fee },
           ],
+          fee,
+          payeeAmount: extra,
           payeeId: booking.tutor_id,
           refType: 'booking',
-          allowCash: true,
         };
       }
       case 'order': {
         if (!listing) return null;
         const rent = listing.mode === 'rent';
         const amount = rent ? listing.price * weeks : listing.price;
+        const fee = serviceFee(amount, settings, me);
         return {
           title: listing.title,
-          subtitle: `${rent ? 'Rent' : 'Buy'} from ${fullName(listing.seller)} · Meetup at ${listing.meetup_spot}`,
+          subtitle: `${rent ? 'Rent' : 'Buy'} from ${fullName(listing.seller)} · delivery by arrangement`,
           lines: [
             { label: rent ? `Rent (${weeks} week${weeks > 1 ? 's' : ''})` : 'Item price', amount },
             ...(rent && listing.deposit ? [{ label: 'Refundable deposit', amount: listing.deposit }] : []),
-            { label: 'PASA service fee', amount: serviceFee(amount, me) },
+            { label: 'PASA service fee', amount: fee },
           ],
+          fee,
+          payeeAmount: amount,
           payeeId: listing.seller_id,
           refType: 'order',
-          allowCash: true,
         };
       }
       case 'boost':
         return {
           title: `Boost your ${params.target}`,
-          subtitle: `Stays at the top for ${BOOST_DAYS} days`,
-          lines: [{ label: 'Boost', amount: BOOST_PRICE }],
+          subtitle: `Stays at the top for ${settings.boost_days} days`,
+          lines: [{ label: 'Boost', amount: settings.boost_price }],
+          fee: 0,
+          payeeAmount: null,
           payeeId: null,
           refType: 'boost',
-          allowCash: false,
         };
-      case 'plus':
+      case 'plus': {
+        const plan = PLUS_PLANS.find((p) => String(p.months) === params.months) ?? PLUS_PLANS[0];
         return {
-          title: 'PASA Plus · 1 month',
-          subtitle: 'Lower service fee, free boosts, Plus badge',
-          lines: [{ label: 'Subscription', amount: PLUS_PRICE }],
+          title: `PASA Plus · ${plan.label}`,
+          subtitle: `${settings.plus_boosts * plan.months} boosts, ${settings.plus_discount}% lower service fee, Plus badge`,
+          lines: [{ label: 'Subscription', amount: settings[plan.key] }],
+          fee: 0,
+          payeeAmount: null,
           payeeId: null,
           refType: 'plus',
-          allowCash: false,
         };
+      }
     }
   })();
 
   if (!summary) return <Screen back title="Checkout"><Loading /></Screen>;
   const total = summary.lines.reduce((s, l) => s + l.amount, 0);
-  const fee = summary.lines.find((l) => l.label === 'PASA service fee')?.amount ?? 0;
-  const payMethod: PayMethod = summary.allowCash ? method : method === 'cash' ? 'gcash' : method;
 
   /** Runs after the fake wallet "succeeds". Returns the reference number, or null on failure. */
   const recordPayment = async (): Promise<string | null> => {
@@ -128,10 +144,9 @@ export default function Checkout() {
         const { error } = await supabase.from('bookings').update({ status: 'paid' }).eq('id', booking.id).eq('status', 'accepted');
         if (error) throw error;
       } else if (params.type === 'extend' && booking) {
-        const extra = summary.lines[0].amount;
         const { error } = await supabase
           .from('bookings')
-          .update({ duration_min: booking.duration_min + 30, amount: booking.amount + extra, fee: booking.fee + fee })
+          .update({ duration_min: booking.duration_min + 30, amount: booking.amount + (summary.payeeAmount ?? 0), fee: booking.fee + summary.fee })
           .eq('id', booking.id);
         if (error) throw error;
       } else if (params.type === 'order' && listing) {
@@ -147,9 +162,9 @@ export default function Checkout() {
             seller_id: listing.seller_id,
             kind: rent ? 'rent' : 'buy',
             weeks: rent ? weeks : 0,
-            amount: summary.lines[0].amount,
+            amount: summary.payeeAmount,
             deposit: rent ? listing.deposit : 0,
-            fee,
+            fee: summary.fee,
             due_at: rent ? daysFromNow(weeks * 7) : null,
           })
           .select('id')
@@ -157,12 +172,21 @@ export default function Checkout() {
         if (error) throw error;
         refId = data.id;
       } else if (params.type === 'boost') {
-        const until = daysFromNow(BOOST_DAYS);
-        const table = params.target === 'post' ? 'posts' : 'listings';
-        const { error } = await supabase.from(table).update({ boosted_until: until }).eq('id', params.id);
+        const { error } = await supabase
+          .from(params.target === 'post' ? 'posts' : 'listings')
+          .update({ boosted_until: daysFromNow(settings.boost_days) })
+          .eq('id', params.id);
         if (error) throw error;
       } else if (params.type === 'plus') {
-        const { error } = await supabase.from('profiles').update({ plus_until: daysFromNow(30) }).eq('id', me.id);
+        const plan = PLUS_PLANS.find((p) => String(p.months) === params.months) ?? PLUS_PLANS[0];
+        // Extend from the current end date if already a member.
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            plus_until: extendFrom(me.plus_until, plan.months * 30),
+            plus_boosts_left: (isPlus(me) ? me.plus_boosts_left : 0) + settings.plus_boosts * plan.months,
+          })
+          .eq('id', me.id);
         if (error) throw error;
         await refreshProfile();
       }
@@ -171,9 +195,10 @@ export default function Checkout() {
         payee_id: summary.payeeId,
         ref_type: summary.refType,
         ref_id: refId,
-        method: payMethod,
+        method,
         amount: total,
-        fee,
+        fee: summary.fee,
+        payee_amount: summary.payeeAmount,
         reference_no: ref,
         status: summary.payeeId ? 'held' : 'paid',
       });
@@ -191,8 +216,13 @@ export default function Checkout() {
     else router.replace('/activity');
   };
 
+  const pay = () => {
+    if ((params.type === 'order' || params.type === 'booking') && !requireVerified(me)) return;
+    setPaying(true);
+  };
+
   return (
-    <Screen back title="Checkout" footer={<Button title={`Pay ${peso(total)}`} onPress={() => setPaying(true)} />}>
+    <Screen back title="Checkout" footer={<Button title={`Pay ${peso(total)}`} onPress={pay} />}>
       <DemoBanner />
       <Card style={{ gap: 4 }}>
         <Text variant="title">{summary.title}</Text>
@@ -215,41 +245,39 @@ export default function Checkout() {
         </Row>
       </Card>
       <Text variant="label">Pay with</Text>
-      {(Object.keys(METHODS) as PayMethod[])
-        .filter((k) => summary.allowCash || k !== 'cash')
-        .map((k) => (
-          <Pressable key={k} onPress={() => setMethod(k)}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 12,
-                padding: 14,
-                borderRadius: radius.md,
-                backgroundColor: colors.white,
-                borderWidth: payMethod === k ? 2 : 1,
-                borderColor: payMethod === k ? colors.primary : colors.border,
-              }}
-            >
-              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: METHODS[k].color, alignItems: 'center', justifyContent: 'center' }}>
-                <Ionicons name={METHODS[k].icon} size={18} color={colors.white} />
-              </View>
-              <Text variant="title" style={{ flex: 1 }}>
-                {METHODS[k].label}
-              </Text>
-              <Ionicons name={payMethod === k ? 'radio-button-on' : 'radio-button-off'} size={22} color={colors.primary} />
+      {(Object.keys(METHODS) as PayMethod[]).map((k) => (
+        <Pressable key={k} onPress={() => setMethod(k)}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+              padding: 14,
+              borderRadius: radius.md,
+              backgroundColor: colors.surface,
+              borderWidth: method === k ? 2 : 1,
+              borderColor: method === k ? colors.primary : colors.border,
+            }}
+          >
+            <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: METHODS[k].color, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name={METHODS[k].icon} size={18} color={colors.white} />
             </View>
-          </Pressable>
-        ))}
+            <Text variant="title" style={{ flex: 1 }}>
+              {METHODS[k].label}
+            </Text>
+            <Ionicons name={method === k ? 'radio-button-on' : 'radio-button-off'} size={22} color={colors.primary} />
+          </View>
+        </Pressable>
+      ))}
       {summary.payeeId && (
         <Row style={{ alignItems: 'flex-start' }}>
           <Ionicons name="shield-checkmark" size={18} color={colors.success} />
           <Text variant="muted" style={{ flex: 1 }}>
-            PASA holds your payment and only releases it once you confirm the session happened or you received the item.
+            PASA holds your payment and releases it to the {summary.refType === 'booking' ? 'tutor' : 'seller'}'s wallet once you confirm the session happened or you received the item.
           </Text>
         </Row>
       )}
-      {paying && <FakeWallet visible method={payMethod} amount={total} onPaid={recordPayment} onClose={done} />}
+      {paying && <FakeWallet visible method={method} amount={total} onPaid={recordPayment} onClose={done} />}
     </Screen>
   );
 }

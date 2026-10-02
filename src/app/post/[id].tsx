@@ -6,7 +6,7 @@ import { PostCard } from '@/components/PostCard';
 import { Screen } from '@/components/Screen';
 import { Button, Loading, Row } from '@/components/ui';
 import { confirm, openChat } from '@/lib/actions';
-import { useMe } from '@/lib/auth';
+import { requireVerified, useMe } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import type { Comment, Post } from '@/lib/types';
 import { useFocusLoad } from '@/lib/useFocusLoad';
@@ -61,7 +61,7 @@ export default function PostDetail() {
         <Button
           title="Offer to help"
           icon="hand-left-outline"
-          onPress={() => openChat(post.author_id, `Hi ${post.author?.first_name}! I saw your post about ${post.subject}. I can help you with it.`)}
+          onPress={() => requireVerified(me) && openChat(post.author_id, `Hi ${post.author?.first_name}! I saw your post about ${post.subject}. I can help you with it.`)}
         />
       )}
       {!mine && post.type === 'offer_tutoring' && (

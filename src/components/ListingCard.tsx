@@ -1,12 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { categoryOf } from '@/config';
 import { peso } from '@/lib/format';
 import type { Listing, ListingStatus } from '@/lib/types';
-import { colors, font, radius } from '@/theme';
+import { colors, font, radius, themed } from '@/theme';
 import { Badge, Text } from './ui';
 
-export const LISTING_STATUS: Record<ListingStatus, { label: string; tone: 'green' | 'yellow' | 'gray' | 'blue' }> = {
+export const LISTING_STATUS: Record<ListingStatus, { label: string; tone: 'green' | 'yellow' | 'gray' | 'blue' | 'red' }> = {
+  pending_review: { label: 'Waiting for approval', tone: 'blue' },
+  rejected: { label: 'Not approved', tone: 'red' },
   available: { label: 'Available Now', tone: 'green' },
   reserved: { label: 'Reserved', tone: 'yellow' },
   on_loan: { label: 'On Loan', tone: 'yellow' },
@@ -19,7 +22,7 @@ export function ListingPhoto({ listing, height }: { listing: Listing; height: nu
   }
   return (
     <View style={[styles.placeholder, { height }]}>
-      <Ionicons name={listing.category === 'book' ? 'book' : 'calculator'} size={height * 0.35} color={colors.brand} />
+      <Ionicons name={categoryOf(listing.category).icon} size={height * 0.35} color={colors.brand} />
     </View>
   );
 }
@@ -56,10 +59,10 @@ export function ListingCard({ listing, favorite, onToggleFavorite }: { listing: 
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   card: {
     flex: 1,
-    backgroundColor: colors.card,
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -73,7 +76,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    backgroundColor: colors.surface, opacity: 0.95,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -85,4 +88,4 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 4,
   },
-});
+}));

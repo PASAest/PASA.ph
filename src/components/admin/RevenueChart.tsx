@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { peso } from '@/lib/format';
-import { colors, font, space } from '@/theme';
+import { colors, font, space, themed } from '@/theme';
 import { Button, Card, Text } from '../ui';
 
 export type DayValue = { day: string; label: string; value: number };
@@ -114,7 +114,7 @@ export function RevenueChart({ title, subtitle, data }: { title: string; subtitl
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   tick: { fontSize: 11.5, color: colors.muted },
   grid: { position: 'absolute', left: 0, right: 0, height: 1, backgroundColor: colors.border },
   columns: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, flexDirection: 'row', alignItems: 'flex-end' },
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   tooltip: {
     position: 'absolute',
     zIndex: 10,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 8,
@@ -138,4 +138,4 @@ const styles = StyleSheet.create({
   },
   peakLabel: { position: 'absolute', fontSize: 11.5, fontFamily: font.semibold, color: colors.text, width: 80, textAlign: 'center' },
   tableRow: { flexDirection: 'row', paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.border },
-});
+}));

@@ -1,4 +1,4 @@
-// Adds demo content (posts, listings, reviews, a chat) for the 4 demo users.
+// Adds demo content (posts, listings in every category, reviews, a chat) for the 4 demo users.
 // 1. Create the users first: run supabase/seed-users.sql in the Supabase SQL Editor.
 // 2. Then: npm run seed   (reads EXPO_PUBLIC_SUPABASE_* from .env)
 // Safe to re-run: content is only created once per user.
@@ -161,6 +161,18 @@ const extra = [
   await addListings(andrea.client, andrea.id, [
     { category: 'book', mode: 'sale', title: 'Purposive Communication', condition: 'Like new', price: 150, meetup_spot: 'Cafeteria', description: 'Bought it but our prof gave us a PDF. Still wrapped in plastic.' },
     { category: 'calculator', mode: 'sale', title: 'Casio fx-570ES Plus', condition: 'Good', price: 500, meetup_spot: 'Cafeteria', description: 'Got a new one as a gift, so selling this. Works perfectly.' },
+  ]),
+  await addListings(carlo.client, carlo.id, [
+    { category: 'uniform', mode: 'sale', title: 'PE Uniform Set (Large)', condition: 'Good', price: 250, description: 'Shirt and jogging pants, washed and ironed. Outgrew it.' },
+    { category: 'school_supplies', mode: 'sale', title: 'Scientific Notebook Bundle (5 pcs)', condition: 'Brand new', price: 120, description: 'Unused, still sealed. Extra from enrollment.' },
+  ]),
+  await addListings(bea.client, bea.id, [
+    { category: 'lab_equipment', mode: 'sale', title: 'Lab Gown (Medium)', condition: 'Like new', price: 280, description: 'Worn for one semester of Chem lab. No stains.' },
+    { category: 'drafting_tools', mode: 'rent', title: 'Drafting Set with T-square', condition: 'Good', price: 40, deposit: 300, description: 'Complete set: T-square, triangles, compass and protractor. Rent weekly for Engineering Drawing.' },
+    { category: 'gadget', mode: 'rent', title: 'Graphing Calculator TI-84 Plus', condition: 'Good', price: 80, deposit: 1500, description: 'For Calculus and Statistics. Rent weekly; deposit returned on return.' },
+  ]),
+  await addListings(andrea.client, andrea.id, [
+    { category: 'school_supplies', mode: 'sale', title: 'Accounting Columnar Pads (2-, 4- and 8-column)', condition: 'Brand new', price: 90, description: 'Bought too many. Complete set of three pads.' },
   ]),
 ].reduce((a, b) => a + b, 0);
 console.log(`✓ ${extra} new item${extra === 1 ? '' : 's'} added to Assets`);

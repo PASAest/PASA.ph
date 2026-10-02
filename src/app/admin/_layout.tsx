@@ -2,7 +2,7 @@ import { Slot } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { AdminShell } from '@/components/admin/AdminShell';
-import { Mascot } from '@/components/Mascot';
+import { Logo } from '@/components/Logo';
 import { Button, Card, Field, Loading, Text } from '@/components/ui';
 import { notify } from '@/lib/actions';
 import { useAuth } from '@/lib/auth';
@@ -16,11 +16,23 @@ export default function AdminLayout() {
   const [check, setCheck] = useState<{ userId: string; isAdmin: boolean } | null>(null);
   const userId = session?.user.id;
   const isAdmin = check && check.userId === userId ? check.isAdmin : null;
-  const [openReports, setOpenReports] = useState(0);
+  const [counts, setCounts] = useState<Record<string, number>>({});
 
+  // Badges in the sidebar: open reports, things waiting for approval, withdrawals to send.
   const refreshCounts = useCallback(async () => {
-    const { count } = await supabase.from('reports').select('id', { count: 'exact', head: true }).eq('status', 'open');
-    setOpenReports(count ?? 0);
+    const head = { count: 'exact' as const, head: true };
+    const [reports, students, tutors, listings, payouts] = await Promise.all([
+      supabase.from('reports').select('id', head).eq('status', 'open'),
+      supabase.from('profiles').select('id', head).eq('verification_status', 'pending'),
+      supabase.from('profiles').select('id', head).eq('tutor_status', 'pending'),
+      supabase.from('listings').select('id', head).eq('status', 'pending_review'),
+      supabase.from('payouts').select('id', head).eq('status', 'requested'),
+    ]);
+    setCounts({
+      '/admin/reports': reports.count ?? 0,
+      '/admin/approvals': (students.count ?? 0) + (tutors.count ?? 0) + (listings.count ?? 0),
+      '/admin/payments': payouts.count ?? 0,
+    });
   }, []);
 
   useEffect(() => {
@@ -30,6 +42,13 @@ export default function AdminLayout() {
       if (data) refreshCounts();
     });
   }, [userId, refreshCounts]);
+
+  // Keep badges fresh while the panel is open.
+  useEffect(() => {
+    if (!isAdmin) return;
+    const t = setInterval(refreshCounts, 30_000);
+    return () => clearInterval(t);
+  }, [isAdmin, refreshCounts]);
 
   if (loading || (session && isAdmin === null)) return <Loading />;
   if (!session) return <AdminLogin />;
@@ -46,7 +65,7 @@ export default function AdminLayout() {
   }
 
   return (
-    <AdminShell openReports={openReports}>
+    <AdminShell counts={counts}>
       <Slot />
     </AdminShell>
   );
@@ -56,7 +75,7 @@ function Centered({ children }: { children: React.ReactNode }) {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: space(6) }}>
       <View style={{ width: '100%', maxWidth: 400, gap: space(4), alignItems: 'center' }}>
-        <Mascot size={90} />
+        <Logo size={72} />
         {children}
       </View>
     </View>

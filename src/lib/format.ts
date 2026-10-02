@@ -1,4 +1,3 @@
-import { PLUS_SERVICE_FEE_RATE, SERVICE_FEE_RATE } from '@/config';
 import type { Profile } from './types';
 
 export const peso = (n: number) => `₱${n.toLocaleString('en-PH')}`;
@@ -8,10 +7,7 @@ export const fullName = (p?: Pick<Profile, 'first_name' | 'last_name'> | null) =
 
 export const yearLabel = (y: number) => `${y}${['st', 'nd', 'rd'][y - 1] ?? 'th'} Year`;
 
-export const isPlus = (p?: Profile | null) => !!p?.plus_until && new Date(p.plus_until) > new Date();
-
-export const serviceFee = (amount: number, payer?: Profile | null) =>
-  Math.round(amount * (isPlus(payer) ? PLUS_SERVICE_FEE_RATE : SERVICE_FEE_RATE));
+export { isPlus } from './settings';
 
 export function timeAgo(iso: string) {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -26,6 +22,10 @@ export const dateTime = (iso: string) =>
   new Date(iso).toLocaleString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
 export const shortDate = (iso: string) => new Date(iso).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+
+/** New membership end date: `days` after the later of now and the current end date. */
+export const extendFrom = (currentEnd: string | null, days: number) =>
+  new Date(Math.max(Date.now(), currentEnd ? new Date(currentEnd).getTime() : 0) + days * 86400000).toISOString();
 
 /** ISO timestamp `days` from now. */
 export const daysFromNow = (days: number) => new Date(Date.now() + days * 86400000).toISOString();

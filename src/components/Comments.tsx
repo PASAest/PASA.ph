@@ -8,7 +8,7 @@ import { fullName, timeAgo } from '@/lib/format';
 import { checkText } from '@/lib/moderation';
 import { supabase } from '@/lib/supabase';
 import type { Comment } from '@/lib/types';
-import { colors, font, radius, space } from '@/theme';
+import { colors, font, radius, space, themed } from '@/theme';
 import { Avatar, Row, Text } from './ui';
 
 /** Comment thread for a post or a listing. */
@@ -67,16 +67,16 @@ export function Comments({ comments, target, onPosted }: { comments: Comment[]; 
   );
 }
 
-const styles = StyleSheet.create({
-  bubble: { flex: 1, backgroundColor: colors.white, borderRadius: radius.md, padding: 10, gap: 2, borderWidth: 1, borderColor: colors.border },
+const styles = themed(() => StyleSheet.create({
+  bubble: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.md, padding: 10, gap: 2, borderWidth: 1, borderColor: colors.border },
   input: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: 14,
   },
-});
+}));

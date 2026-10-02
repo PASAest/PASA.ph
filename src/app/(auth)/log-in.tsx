@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
-import { Mascot } from '@/components/Mascot';
+import { Logo } from '@/components/Logo';
 import { Screen } from '@/components/Screen';
 import { Button, Field, Text } from '@/components/ui';
 import { notify } from '@/lib/actions';
@@ -25,7 +25,7 @@ export default function LogIn() {
   return (
     <Screen back>
       <View style={{ alignItems: 'center', gap: 6, marginVertical: 24 }}>
-        <Mascot size={110} />
+        <Logo size={84} />
         <Text variant="h1">Welcome back!</Text>
         <Text variant="muted">Log in to continue to PASA</Text>
       </View>

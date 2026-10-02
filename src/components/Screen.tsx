@@ -3,7 +3,7 @@ import { router, Stack } from 'expo-router';
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, font, space } from '@/theme';
+import { colors, font, space, themed } from '@/theme';
 import { Text } from './ui';
 
 type Props = {
@@ -62,7 +62,7 @@ export function Screen({ children, title, back, right, scroll = true, refreshing
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -77,9 +77,9 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: space(4),
     paddingTop: space(3),
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     gap: space(2),
   },
-});
+}));

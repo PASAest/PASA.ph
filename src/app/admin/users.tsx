@@ -51,7 +51,7 @@ export default function Users() {
     if (filter === 'tutors' && !u.is_tutor) return false;
     if (filter === 'plus' && !(u.plus_until && new Date(u.plus_until) > now)) return false;
     if (filter === 'banned' && !u.banned) return false;
-    return !q || `${u.first_name} ${u.last_name} ${u.email} ${u.program}`.toLowerCase().includes(q);
+    return !q || `${u.first_name} ${u.last_name} ${u.email} ${u.program} ${u.school}`.toLowerCase().includes(q);
   });
 
   const counts = {
@@ -77,7 +77,9 @@ export default function Users() {
               shown.map((u) => ({
                 name: `${u.first_name} ${u.last_name}`,
                 email: u.email,
+                school: u.school,
                 program: u.program,
+                verification: u.verification_status,
                 year: u.year_level,
                 tutor: u.is_tutor ? 'yes' : 'no',
                 joined: u.created_at,
@@ -120,7 +122,7 @@ export default function Users() {
               </Row>
             ),
           },
-          { key: 'program', label: 'Program', flex: 1.5, render: (u) => <Text variant="muted">{`${u.program} · ${yearLabel(u.year_level)}`}</Text> },
+          { key: 'program', label: 'School · program', flex: 1.8, render: (u) => <Text variant="muted">{`${u.school}\n${u.program} · ${yearLabel(u.year_level)}`}</Text> },
           {
             key: 'tags',
             label: 'Tags',
@@ -128,6 +130,9 @@ export default function Users() {
             render: (u) => (
               <Row gap={4} style={{ flexWrap: 'wrap' }}>
                 {u.is_admin && <Badge label="Admin" tone="blue" />}
+                {u.verification_status === 'verified' && <Badge label="Verified" tone="green" />}
+                {u.verification_status === 'pending' && <Badge label="To verify" tone="yellow" />}
+                {u.tutor_status === 'pending' && <Badge label="Tutor applicant" tone="yellow" />}
                 {u.is_tutor && <Badge label="Tutor" tone="green" />}
                 {u.plus_until && new Date(u.plus_until) > now && <Badge label="Plus" tone="yellow" />}
                 {u.banned && <Badge label="Banned" tone="red" />}

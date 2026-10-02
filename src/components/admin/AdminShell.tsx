@@ -4,20 +4,22 @@ import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
-import { colors, font, radius, space } from '@/theme';
-import { Mascot } from '../Mascot';
+import { colors, font, radius, space, themed } from '@/theme';
+import { Logo } from '../Logo';
 import { Text, type IconName } from '../ui';
 
 const NAV: { href: Href; path: string; label: string; icon: IconName }[] = [
   { href: '/admin', path: '/admin', label: 'Dashboard', icon: 'stats-chart-outline' },
+  { href: '/admin/approvals', path: '/admin/approvals', label: 'Approvals', icon: 'checkmark-done-outline' },
   { href: '/admin/reports', path: '/admin/reports', label: 'Reports', icon: 'flag-outline' },
   { href: '/admin/users', path: '/admin/users', label: 'Users', icon: 'people-outline' },
   { href: '/admin/content', path: '/admin/content', label: 'Listings & posts', icon: 'library-outline' },
-  { href: '/admin/payments', path: '/admin/payments', label: 'Payments', icon: 'wallet-outline' },
+  { href: '/admin/payments', path: '/admin/payments', label: 'Payments & payouts', icon: 'wallet-outline' },
+  { href: '/admin/settings', path: '/admin/settings', label: 'Settings', icon: 'settings-outline' },
 ];
 
 /** Admin layout: sidebar on wide screens, scrolling tab row on phones. */
-export function AdminShell({ children, openReports }: { children: ReactNode; openReports: number }) {
+export function AdminShell({ children, counts }: { children: ReactNode; counts: Record<string, number> }) {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const path = usePathname();
@@ -45,9 +47,9 @@ export function AdminShell({ children, openReports }: { children: ReactNode; ope
         <Text style={{ fontFamily: active ? font.bold : font.semibold, color: active ? colors.primaryDark : colors.text, flex: wide ? 1 : undefined }}>
           {n.label}
         </Text>
-        {n.path === '/admin/reports' && openReports > 0 && (
+        {(counts[n.path] ?? 0) > 0 && (
           <View style={styles.count}>
-            <Text style={{ color: colors.white, fontFamily: font.bold, fontSize: 11 }}>{openReports}</Text>
+            <Text style={{ color: colors.white, fontFamily: font.bold, fontSize: 11 }}>{counts[n.path]}</Text>
           </View>
         )}
       </Pressable>
@@ -56,7 +58,7 @@ export function AdminShell({ children, openReports }: { children: ReactNode; ope
 
   const brand = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-      <Mascot size={28} />
+      <Logo size={30} />
       <Text style={{ fontFamily: font.black, fontSize: 20, color: colors.primaryDark }}>PASA</Text>
       <View style={styles.adminTag}>
         <Text style={{ fontFamily: font.bold, fontSize: 11, color: colors.primaryDark }}>ADMIN</Text>
@@ -114,17 +116,17 @@ export function AdminPage({ title, subtitle, actions, children }: { title: strin
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   sidebar: {
     width: 240,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRightWidth: 1,
     borderRightColor: colors.border,
     padding: space(5),
   },
   sideItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: radius.sm },
   tabItem: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.pill },
-  topbar: { backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: space(4), paddingBottom: space(3) },
+  topbar: { backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: space(4), paddingBottom: space(3) },
   adminTag: { backgroundColor: colors.brandSoft, borderRadius: radius.sm, paddingHorizontal: 6, paddingVertical: 2 },
   count: { minWidth: 20, height: 20, borderRadius: 10, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
-});
+}));

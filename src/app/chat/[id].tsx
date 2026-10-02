@@ -1,19 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ChatMedia } from '@/components/ChatMedia';
 import { MenuSheet } from '@/components/MenuSheet';
+import { StatusDot } from '@/components/StatusDot';
 import { Avatar, Row, Text } from '@/components/ui';
 import { confirm, notify } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
 import { fullName } from '@/lib/format';
 import { checkText } from '@/lib/moderation';
+import { PRESENCE_LABEL, useStatuses } from '@/lib/presence';
 import { supabase } from '@/lib/supabase';
 import type { Conversation, Message, Profile } from '@/lib/types';
-import { colors, font, radius, space } from '@/theme';
+import { pickMedia, signedUrls, uploadChatMedia } from '@/lib/upload';
+import { colors, font, radius, space, themed } from '@/theme';
 
-// 3.3 · Chat thread (live via Supabase Realtime)
+// 3.3 · Chat thread (live via Supabase Realtime) with photo and video attachments
 export default function Chat() {
   const { id, draft } = useLocalSearchParams<{ id: string; draft?: string }>();
   const { me } = useMe();
@@ -23,7 +27,17 @@ export default function Chat() {
   const [text, setText] = useState(draft ?? '');
   const [blocked, setBlocked] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
+  const [sendingMedia, setSendingMedia] = useState(false);
   const list = useRef<FlatList<Message>>(null);
+  const status = useStatuses([other?.id])[other?.id ?? ''];
+
+  // Private attachments need short-lived signed links.
+  useEffect(() => {
+    const missing = messages.map((m) => m.attachment_path).filter((p): p is string => !!p && !mediaUrls[p]);
+    if (!missing.length) return;
+    signedUrls('chat', missing).then((urls) => setMediaUrls((cur) => ({ ...cur, ...urls })));
+  }, [messages, mediaUrls]);
 
   useEffect(() => {
     (async () => {
@@ -71,6 +85,26 @@ export default function Chat() {
     setMessages((prev) => (prev.some((x) => x.id === data.id) ? prev : [...prev, data]));
   };
 
+  const sendMedia = async () => {
+    const file = await pickMedia({ video: true, crop: false });
+    if (!file) return;
+    setSendingMedia(true);
+    try {
+      const path = await uploadChatMedia(file, id);
+      const { data, error } = await supabase
+        .from('messages')
+        .insert({ conversation_id: id, sender_id: me.id, body: '', attachment_path: path, attachment_type: file.kind === 'video' ? 'video' : 'image' })
+        .select()
+        .single();
+      if (error) throw error;
+      setMessages((prev) => (prev.some((x) => x.id === data.id) ? prev : [...prev, data]));
+    } catch (e) {
+      notify('Could not send', (e as Error).message);
+    } finally {
+      setSendingMedia(false);
+    }
+  };
+
   const block = async () => {
     if (!other || !(await confirm(`Block ${other.first_name}?`, "You won't receive messages from them.", 'Block'))) return;
     await supabase.from('blocks').insert({ blocker_id: me.id, blocked_id: other.id });
@@ -84,12 +118,15 @@ export default function Chat() {
           <Ionicons name="chevron-back" size={26} color={colors.text} />
         </Pressable>
         <Pressable style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }} onPress={() => other && router.push(`/user/${other.id}`)}>
-          <Avatar profile={other} size={38} />
+          <View>
+            <Avatar profile={other} size={38} />
+            <StatusDot status={status} />
+          </View>
           <View>
             <Text variant="title">{fullName(other)}</Text>
             <Text variant="muted" style={{ fontSize: 12 }}>
-              {other?.is_tutor ? 'Tutor · ' : ''}
-              {other?.program}
+              {status ? `${PRESENCE_LABEL[status]} · ` : ''}
+              {other?.is_tutor ? 'Tutor' : other?.program}
             </Text>
           </View>
         </Pressable>
@@ -108,15 +145,16 @@ export default function Chat() {
           <View style={styles.notice}>
             <Ionicons name="shield-checkmark-outline" size={14} color={colors.primaryDark} />
             <Text style={{ fontSize: 12, color: colors.primaryDark, flex: 1 }}>
-              Pay through PASA so your money is protected. Keep chats respectful; offensive words are blocked.
+              Pay through PASA so your money is protected. Keep chats respectful; offensive words and links are blocked.
             </Text>
           </View>
         }
         renderItem={({ item }) => {
           const mine = item.sender_id === me.id;
           return (
-            <View style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
-              <Text style={{ color: mine ? colors.white : colors.text }}>{item.body}</Text>
+            <View style={[styles.bubble, mine ? styles.mine : styles.theirs, !!item.attachment_path && { padding: 4 }]}>
+              {item.attachment_path && item.attachment_type && <ChatMedia url={mediaUrls[item.attachment_path]} type={item.attachment_type} />}
+              {!!item.body && <Text style={{ color: mine ? colors.white : colors.text }}>{item.body}</Text>}
               <Text style={{ fontSize: 10.5, color: mine ? 'rgba(255,255,255,0.8)' : colors.muted, alignSelf: 'flex-end' }}>
                 {new Date(item.created_at).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })}
               </Text>
@@ -131,6 +169,9 @@ export default function Chat() {
         </View>
       ) : (
         <Row style={[styles.composer, { paddingBottom: insets.bottom + 10 }]}>
+          <Pressable onPress={sendMedia} disabled={sendingMedia} hitSlop={8} accessibilityLabel="Send a photo or video">
+            {sendingMedia ? <ActivityIndicator color={colors.primary} /> : <Ionicons name="image-outline" size={26} color={colors.primary} />}
+          </Pressable>
           <TextInput
             value={text}
             onChangeText={setText}
@@ -161,22 +202,22 @@ export default function Chat() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: space(3),
     paddingBottom: space(2),
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   notice: { flexDirection: 'row', gap: 6, backgroundColor: colors.brandSoft, borderRadius: radius.sm, padding: 8, marginBottom: 8 },
   bubble: { maxWidth: '80%', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8, gap: 2 },
   mine: { alignSelf: 'flex-end', backgroundColor: colors.primary, borderBottomRightRadius: 4 },
-  theirs: { alignSelf: 'flex-start', backgroundColor: colors.white, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: colors.border },
-  composer: { paddingHorizontal: space(3), paddingTop: 10, backgroundColor: colors.white, borderTopWidth: 1, borderTopColor: colors.border },
+  theirs: { alignSelf: 'flex-start', backgroundColor: colors.surface, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: colors.border },
+  composer: { paddingHorizontal: space(3), paddingTop: 10, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
   input: {
     flex: 1,
     minHeight: 42,
@@ -192,4 +233,4 @@ const styles = StyleSheet.create({
     outlineStyle: 'none',
   } as object,
   send: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-});
+}));

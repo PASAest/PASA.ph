@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 import { StyleSheet, TextInput, View, type DimensionValue } from 'react-native';
-import { colors, font, radius, space } from '@/theme';
+import { colors, font, radius, space, themed } from '@/theme';
 import { Card, Text, type IconName } from '../ui';
 
 /** One headline number with a label and optional note. */
@@ -75,13 +75,13 @@ export function DataTable<T>({ columns, rows, rowKey, empty }: { columns: Column
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   tile: { gap: 4, flexGrow: 1, flexBasis: 180, minWidth: 160 },
   search: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.pill,
@@ -92,4 +92,4 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 12, paddingHorizontal: space(4), paddingVertical: space(3), borderTopWidth: 1, borderTopColor: colors.border, alignItems: 'center' },
   header: { backgroundColor: colors.bg, borderTopWidth: 0 },
   headerText: { fontFamily: font.bold, fontSize: 12, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
-});
+}));

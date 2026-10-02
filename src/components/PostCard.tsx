@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { fullName, peso, timeAgo, yearLabel } from '@/lib/format';
 import type { Post } from '@/lib/types';
-import { colors, space } from '@/theme';
+import { colors, space, themed } from '@/theme';
 import { Avatar, Badge, Card, Row, Text } from './ui';
 
 export const POST_TYPES = {
@@ -48,6 +48,6 @@ export function PostCard({ post, full }: { post: Post; full?: boolean }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   footer: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: space(3) },
-});
+}));

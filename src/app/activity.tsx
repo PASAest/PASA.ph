@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Linking, ScrollView, View } from 'react-native';
 import { Screen } from '@/components/Screen';
-import { Avatar, Badge, Button, Card, Chip, Empty, Loading, Row, Text } from '@/components/ui';
-import { CANCEL_CUTOFF_MIN } from '@/config';
+import { Avatar, Badge, Button, Card, Chip, Empty, Field, Loading, Row, Text } from '@/components/ui';
+import { CANCEL_CUTOFF_MIN, isMeetingLink } from '@/config';
 import { confirm, notify, openChat } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
 import { dateTime, fullName, peso, shortDate } from '@/lib/format';
@@ -105,6 +105,16 @@ function Person({ label, person }: { label: string; person?: Profile }) {
 
 function BookingCard({ booking: b, me, reviewed, onChange }: { booking: Booking; me: Profile; reviewed: boolean; onChange: () => void }) {
   const isTutor = b.tutor_id === me.id;
+  const online = b.mode === 'online';
+  const [link, setLink] = useState(b.meeting_link);
+  const where = online ? `Online via ${b.platform}` : b.location;
+
+  const saveLink = async () => {
+    if (!isMeetingLink(b.platform, link)) return notify('Check the link', `Paste the ${b.platform} meeting link (it should start with https://).`);
+    const { error } = await supabase.from('bookings').update({ meeting_link: link.trim() }).eq('id', b.id);
+    if (error) return notify('Could not save link', error.message);
+    onChange();
+  };
   const other = isTutor ? b.student : b.tutor;
   const now = useNow();
   const minutesToStart = (new Date(b.starts_at).getTime() - now) / 60000;
@@ -141,8 +151,8 @@ function BookingCard({ booking: b, me, reviewed, onChange }: { booking: Booking;
         </Text>
       </Row>
       <Row>
-        <Ionicons name="location-outline" size={16} color={colors.muted} />
-        <Text variant="muted">{b.location}</Text>
+        <Ionicons name={online ? 'videocam-outline' : 'location-outline'} size={16} color={colors.muted} />
+        <Text variant="muted">{where}</Text>
       </Row>
       <Row>
         <Ionicons name="cash-outline" size={16} color={colors.muted} />
@@ -156,12 +166,24 @@ function BookingCard({ booking: b, me, reviewed, onChange }: { booking: Booking;
         <View style={{ backgroundColor: colors.warningSoft, borderRadius: 10, padding: 10, flexDirection: 'row', gap: 8 }}>
           <Ionicons name="alarm-outline" size={18} color={colors.warning} />
           <Text style={{ color: colors.warning, fontFamily: font.bold, flex: 1 }}>
-            {started ? 'Happening now' : `Starts in ${Math.ceil(minutesToStart)} min`} at {b.location}
+            {started ? 'Happening now' : `Starts in ${Math.ceil(minutesToStart)} min`} · {where}
           </Text>
         </View>
       )}
 
+      {online && ['accepted', 'paid'].includes(b.status) && isTutor && !b.meeting_link && (
+        <View style={{ gap: 8 }}>
+          <Field label={`${b.platform} meeting link`} placeholder="https://…" value={link} onChangeText={setLink} autoCapitalize="none" icon="link-outline" />
+          <Button title="Save link" small variant="outline" onPress={saveLink} />
+        </View>
+      )}
+      {online && ['accepted', 'paid'].includes(b.status) && !isTutor && !b.meeting_link && (
+        <Text variant="muted">{b.tutor?.first_name} will add the {b.platform} link before the session.</Text>
+      )}
       <Row style={{ flexWrap: 'wrap' }}>
+        {online && !!b.meeting_link && ['accepted', 'paid'].includes(b.status) && (
+          <Button title={`Join ${b.platform}`} small icon="videocam" onPress={() => Linking.openURL(b.meeting_link)} />
+        )}
         {isTutor && b.status === 'requested' && (
           <>
             <Button title="Accept" small icon="checkmark" onPress={() => update('accepted')} />
@@ -231,8 +253,8 @@ function OrderCard({ order: o, me, reviewed, onChange }: { order: Order; me: Pro
       </Text>
       <Person label={isSeller ? 'Buyer:' : 'Seller:'} person={other} />
       <Row>
-        <Ionicons name="location-outline" size={16} color={colors.muted} />
-        <Text variant="muted">Meetup at {o.listing?.meetup_spot}</Text>
+        <Ionicons name="cube-outline" size={16} color={colors.muted} />
+        <Text variant="muted">Delivery by arrangement in chat</Text>
       </Row>
       <Row>
         <Ionicons name="cash-outline" size={16} color={colors.muted} />

@@ -3,12 +3,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { Avatar, Button, Card, ChipSelect, Divider, Field, Loading, Row, Text } from '@/components/ui';
-import { CAMPUS_SPOTS, CANCEL_CUTOFF_MIN } from '@/config';
+import { CANCEL_CUTOFF_MIN, PLATFORMS } from '@/config';
 import { notify } from '@/lib/actions';
-import { useMe } from '@/lib/auth';
-import { fullName, peso, serviceFee } from '@/lib/format';
+import { requireVerified, useMe } from '@/lib/auth';
+import { fullName, peso } from '@/lib/format';
+import { checkText } from '@/lib/moderation';
+import { serviceFee, useSettings } from '@/lib/settings';
 import { supabase } from '@/lib/supabase';
-import type { Profile } from '@/lib/types';
+import type { Profile, TutorMode } from '@/lib/types';
 import { colors, font } from '@/theme';
 
 const DURATIONS = [60, 90, 120];
@@ -30,7 +32,7 @@ const timeLabel = (t: string) => {
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
 };
 
-// 3.5 · Book a tutor: subject, date/time, duration, campus spot (face-to-face only)
+// 3.5 · Book a tutor: subject, online or in person, date/time, duration
 export default function BookTutor() {
   const { tutorId } = useLocalSearchParams<{ tutorId: string }>();
   const { me } = useMe();
@@ -40,7 +42,10 @@ export default function BookTutor() {
   const [day, setDay] = useState<string>(days[1]);
   const [time, setTime] = useState<string | null>(null);
   const [duration, setDuration] = useState(60);
-  const [spot, setSpot] = useState(CAMPUS_SPOTS[0]);
+  const { settings } = useSettings();
+  const [mode, setMode] = useState<TutorMode | null>(null);
+  const [platform, setPlatform] = useState<string>(PLATFORMS[0]);
+  const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -48,13 +53,15 @@ export default function BookTutor() {
     supabase.from('profiles').select('*').eq('id', tutorId).single().then(({ data }) => {
       setTutor(data);
       if (data?.tutor_subjects?.length === 1) setSubject(data.tutor_subjects[0]);
+      if (data?.tutor_modes?.length === 1) setMode(data.tutor_modes[0]);
     });
   }, [tutorId]);
 
   if (!tutor) return <Screen back title="Book a session"><Loading /></Screen>;
 
   const amount = Math.round((tutor.tutor_rate * duration) / 60);
-  const fee = serviceFee(amount, me);
+  const fee = serviceFee(amount, settings, me);
+  const modes: TutorMode[] = tutor.tutor_modes?.length ? tutor.tutor_modes : ['in_person'];
 
   const startsAt = () => {
     if (!time) return null;
@@ -66,7 +73,12 @@ export default function BookTutor() {
 
   const submit = async () => {
     const start = startsAt();
+    if (!requireVerified(me)) return;
     if (!subject) return notify('Pick a subject');
+    if (!mode) return notify('Choose online or in person');
+    if (mode === 'in_person' && !location.trim()) return notify('Where will you meet?', 'Type the place you\'ll meet, e.g. a library or café.');
+    const placeCheck = checkText(`${location} ${notes}`);
+    if (!placeCheck.ok) return notify('Please edit your request', placeCheck.reason);
     if (!start) return notify('Pick a time');
     if (start.getTime() < Date.now() + CANCEL_CUTOFF_MIN * 60000) return notify('Pick a later time', 'Sessions must start at least 15 minutes from now.');
     setSaving(true);
@@ -76,7 +88,9 @@ export default function BookTutor() {
       subject,
       starts_at: start.toISOString(),
       duration_min: duration,
-      location: spot,
+      mode,
+      platform: mode === 'online' ? platform : '',
+      location: mode === 'in_person' ? location.trim() : '',
       notes: notes.trim(),
       amount,
       fee,
@@ -94,7 +108,9 @@ export default function BookTutor() {
           <Avatar profile={tutor} size={50} />
           <View style={{ flex: 1 }}>
             <Text variant="title">{fullName(tutor)}</Text>
-            <Text variant="muted">{peso(tutor.tutor_rate)}/hr · Face-to-face</Text>
+            <Text variant="muted">
+              {peso(tutor.tutor_rate)}/hr · {modes.map((m) => (m === 'online' ? 'Online' : 'In person')).join(' or ')}
+            </Text>
           </View>
         </Row>
       </Card>
@@ -102,7 +118,18 @@ export default function BookTutor() {
       <ChipSelect label="Day" options={days} value={day} onChange={setDay} format={(d) => dayLabel(d, days.indexOf(d))} />
       <ChipSelect label="Start time" options={TIMES} value={time} onChange={setTime} format={timeLabel} />
       <ChipSelect label="Duration" options={DURATIONS} value={duration} onChange={setDuration} format={(m) => (m === 60 ? '1 hour' : `${m / 60} hours`)} />
-      <ChipSelect label="Where on campus?" options={CAMPUS_SPOTS} value={spot} onChange={setSpot} />
+      <ChipSelect label="How?" options={modes} value={mode} onChange={setMode} format={(m) => (m === 'online' ? 'Online' : 'In person')} />
+      {mode === 'online' && (
+        <>
+          <ChipSelect label="Platform" options={PLATFORMS} value={platform} onChange={setPlatform} />
+          <Text variant="muted" style={{ marginTop: -8 }}>
+            {tutor.first_name} will add the meeting link after accepting.
+          </Text>
+        </>
+      )}
+      {mode === 'in_person' && (
+        <Field label="Where will you meet?" placeholder="e.g. PUP Santa Rosa library, 2nd floor" value={location} onChangeText={setLocation} icon="location-outline" />
+      )}
       <Field label="Notes for your tutor (optional)" placeholder="Topics you're stuck on, your exam date…" value={notes} onChangeText={setNotes} multiline />
       <Card style={{ gap: 8 }}>
         <Row style={{ justifyContent: 'space-between' }}>

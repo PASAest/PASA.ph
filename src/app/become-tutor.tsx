@@ -1,46 +1,80 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
+import { DocUpload } from '@/components/DocUpload';
 import { Screen } from '@/components/Screen';
-import { Button, Card, Chip, Field, Text } from '@/components/ui';
+import { Select } from '@/components/Select';
+import { Badge, Button, Card, Chip, Field, Row, Text } from '@/components/ui';
 import { SUBJECTS } from '@/config';
 import { confirm, notify } from '@/lib/actions';
-import { useMe } from '@/lib/auth';
+import { requireVerified, useMe } from '@/lib/auth';
+import { peso } from '@/lib/format';
 import { checkText } from '@/lib/moderation';
+import { useSettings } from '@/lib/settings';
 import { supabase } from '@/lib/supabase';
+import type { TutorMode } from '@/lib/types';
+import { uploadDocument, type Picked } from '@/lib/upload';
 import { colors } from '@/theme';
 
-// Become a tutor / edit tutor profile: subjects, hourly rate, about
+const STATUS = {
+  none: { label: 'Not applied', tone: 'gray' },
+  pending: { label: 'Under review', tone: 'yellow' },
+  approved: { label: 'Approved tutor', tone: 'green' },
+  rejected: { label: 'Not approved', tone: 'red' },
+} as const;
+
+// Become a tutor / edit tutor profile. New tutors upload a CV; the PASA team approves them (ID + COR come from verification).
 export default function BecomeTutor() {
   const { setup } = useLocalSearchParams<{ setup?: string }>();
   const { me, refreshProfile } = useMe();
+  const { settings } = useSettings();
   const [subjects, setSubjects] = useState<string[]>(me.tutor_subjects);
-  const [rate, setRate] = useState(me.tutor_rate ? String(me.tutor_rate) : '');
+  const [rate, setRate] = useState(String(me.tutor_rate || settings.min_tutor_rate));
   const [about, setAbout] = useState(me.tutor_about);
+  const [modes, setModes] = useState<TutorMode[]>(me.tutor_modes?.length ? me.tutor_modes : ['in_person', 'online']);
+  const [cv, setCv] = useState<Picked | null>(null);
   const [saving, setSaving] = useState(false);
+  const approved = me.tutor_status === 'approved';
+  const leave = () => (setup ? router.replace('/(tabs)') : router.back());
 
-  const toggle = (s: string) => setSubjects((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]));
+  const toggleMode = (m: TutorMode) => setModes((cur) => (cur.includes(m) ? cur.filter((x) => x !== m) : [...cur, m]));
 
   const save = async () => {
+    if (!approved && !requireVerified(me)) return;
     if (!subjects.length) return notify('Pick at least one subject');
-    if (!rate || Number(rate) < 50) return notify('Set your hourly rate', 'Minimum is ₱50 per hour.');
+    if (!modes.length) return notify('Choose online, in-person, or both');
+    if (!rate || Number(rate) < settings.min_tutor_rate) return notify('Set your hourly rate', `The minimum is ${peso(settings.min_tutor_rate)} per hour.`);
     const check = checkText(about);
     if (!check.ok) return notify('Please edit your intro', check.reason);
+    if (!approved && !cv && !me.cv_doc_path) return notify('Add your CV', 'Upload your CV (photo or PDF) so the PASA team can review your application.');
     setSaving(true);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_tutor: true, tutor_subjects: subjects, tutor_rate: Number(rate), tutor_about: about.trim() })
-      .eq('id', me.id);
-    setSaving(false);
-    if (error) return notify('Could not save', error.message);
-    await refreshProfile();
-    if (setup) router.replace('/(tabs)');
-    else router.back();
+    try {
+      const cv_doc_path = cv ? await uploadDocument(cv, me.id, 'cv') : me.cv_doc_path;
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          tutor_subjects: subjects,
+          tutor_rate: Number(rate),
+          tutor_about: about.trim(),
+          tutor_modes: modes,
+          cv_doc_path,
+          ...(approved ? { is_tutor: true } : { tutor_status: 'pending' }),
+        })
+        .eq('id', me.id);
+      if (error) throw error;
+      await refreshProfile();
+      if (!approved) notify('Application sent!', 'The PASA team will review your CV and documents. We\'ll notify you once you\'re approved.');
+      leave();
+    } catch (e) {
+      notify('Could not save', (e as Error).message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const stop = async () => {
-    if (!(await confirm('Stop tutoring?', "Students won't be able to book you. You can turn it back on anytime.", 'Stop'))) return;
-    await supabase.from('profiles').update({ is_tutor: false }).eq('id', me.id);
+    if (!(await confirm('Stop tutoring?', "Students won't be able to book you. You'll need to apply again to come back.", 'Stop'))) return;
+    await supabase.from('profiles').update({ is_tutor: false, tutor_status: 'none' }).eq('id', me.id);
     await refreshProfile();
     router.back();
   };
@@ -48,38 +82,56 @@ export default function BecomeTutor() {
   return (
     <Screen
       back={!setup}
-      title={me.is_tutor ? 'Tutor profile' : 'Become a tutor'}
+      title={approved ? 'Tutor profile' : 'Become a tutor'}
       footer={
         <>
-          <Button title={me.is_tutor ? 'Save' : 'Start tutoring'} onPress={save} loading={saving} />
-          {setup && <Button title="Skip for now" variant="ghost" onPress={() => router.replace('/(tabs)')} />}
+          <Button
+            title={approved ? 'Save' : me.tutor_status === 'pending' ? 'Update application' : 'Submit application'}
+            onPress={save}
+            loading={saving}
+          />
+          {setup && <Button title="Skip for now" variant="ghost" onPress={leave} />}
         </>
       }
     >
-      <Text variant="muted">Tutoring on PASA is face-to-face on campus. Students book a time and place, pay through PASA, and you get paid after the session.</Text>
+      <Row>
+        <Text variant="label">Status:</Text>
+        <Badge label={STATUS[me.tutor_status].label} tone={STATUS[me.tutor_status].tone} />
+      </Row>
+      {me.tutor_status === 'rejected' && !!me.rejection_note && (
+        <Card style={{ backgroundColor: colors.dangerSoft, borderColor: colors.dangerSoft }}>
+          <Text style={{ color: colors.danger }}>{me.rejection_note}</Text>
+        </Card>
+      )}
+      <Text variant="muted">
+        Tutor online through Zoom, Google Meet or MS Teams, or in person at a place you and the student agree on. Students pay through PASA and you get your full rate.
+      </Text>
+      <Select label="Subjects you can teach" options={SUBJECTS} value={subjects} onChange={setSubjects} multiple icon="book-outline" />
       <View style={{ gap: 8 }}>
-        <Text variant="label">Subjects you can teach</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {SUBJECTS.map((s) => (
-            <Chip key={s} label={s} selected={subjects.includes(s)} onPress={() => toggle(s)} />
-          ))}
-        </View>
+        <Text variant="label">How do you tutor?</Text>
+        <Row>
+          <Chip label="Online" icon="videocam-outline" selected={modes.includes('online')} onPress={() => toggleMode('online')} />
+          <Chip label="In person" icon="people-outline" selected={modes.includes('in_person')} onPress={() => toggleMode('in_person')} />
+        </Row>
       </View>
-      <Field label="Rate per hour" placeholder="₱150" value={rate} onChangeText={(v) => setRate(v.replace(/\D/g, ''))} keyboardType="number-pad" icon="cash-outline" />
       <Field
-        label="About you as a tutor"
-        placeholder="Grades, awards, how you teach, when you're free…"
-        value={about}
-        onChangeText={setAbout}
-        multiline
-        maxLength={400}
+        label={`Rate per hour (minimum ${peso(settings.min_tutor_rate)})`}
+        placeholder={String(settings.min_tutor_rate)}
+        value={rate}
+        onChangeText={(v) => setRate(v.replace(/\D/g, ''))}
+        keyboardType="number-pad"
+        icon="cash-outline"
       />
-      <Card style={{ backgroundColor: colors.brandSoft, borderColor: colors.brandSoft }}>
-        <Text style={{ color: colors.primaryDark, fontSize: 13.5 }}>
-          Students pay your rate plus a small PASA service fee. You receive your full rate.
-        </Text>
-      </Card>
-      {me.is_tutor && !setup && <Button title="Stop tutoring" variant="danger" onPress={stop} />}
+      <Field label="About you as a tutor" placeholder="Grades, awards, how you teach, when you're free…" value={about} onChangeText={setAbout} multiline maxLength={400} />
+      {!approved && (
+        <>
+          <DocUpload label="CV / Resume" hint="Photo or PDF" file={cv} onPick={setCv} uploaded={!!me.cv_doc_path} />
+          <Text variant="muted" style={{ fontSize: 12.5 }}>
+            Your school ID and COR from verification are included in your application.
+          </Text>
+        </>
+      )}
+      {approved && !setup && <Button title="Stop tutoring" variant="danger" onPress={stop} />}
     </Screen>
   );
 }

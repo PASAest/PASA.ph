@@ -2,17 +2,29 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { Screen } from '@/components/Screen';
-import { Card, Text, type IconName } from '@/components/ui';
+import { Badge, Card, Chip, Text, type IconName } from '@/components/ui';
 import { confirm } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/lib/themeMode';
+import type { ThemeMode } from '@/theme';
 import { colors, space } from '@/theme';
+
+const VERIFY = {
+  unverified: { label: 'Not verified', tone: 'gray' },
+  pending: { label: 'In review', tone: 'yellow' },
+  verified: { label: 'Verified', tone: 'green' },
+  rejected: { label: 'Re-upload needed', tone: 'red' },
+} as const;
 
 export default function Settings() {
   const { me } = useMe();
-  const items: { icon: IconName; label: string; href: Href }[] = [
+  const { mode, setMode } = useTheme();
+  const items: { icon: IconName; label: string; href: Href; badge?: { label: string; tone: 'gray' | 'yellow' | 'green' | 'red' } }[] = [
+    { icon: 'shield-checkmark-outline', label: 'Student verification', href: '/verify', badge: VERIFY[me.verification_status] },
     { icon: 'person-outline', label: 'Edit profile', href: '/edit-profile' },
-    { icon: 'school-outline', label: me.is_tutor ? 'Tutor profile' : 'Become a tutor', href: '/become-tutor' },
+    { icon: 'wallet-outline', label: 'Wallet', href: '/wallet' },
+    { icon: 'school-outline', label: me.tutor_status === 'approved' ? 'Tutor profile' : 'Become a tutor', href: '/become-tutor' },
     { icon: 'calendar-outline', label: 'My activity', href: '/activity' },
     { icon: 'star-outline', label: 'PASA Plus', href: '/plus' },
     { icon: 'document-text-outline', label: 'Terms, community rules & privacy', href: '/terms' },
@@ -35,9 +47,24 @@ export default function Settings() {
           >
             <Ionicons name={it.icon} size={21} color={colors.primary} />
             <Text style={{ flex: 1 }}>{it.label}</Text>
+            {it.badge && <Badge label={it.badge.label} tone={it.badge.tone} />}
             <Ionicons name="chevron-forward" size={18} color={colors.muted} />
           </Pressable>
         ))}
+      </Card>
+      <Card style={{ gap: space(3) }}>
+        <Text variant="title">Appearance</Text>
+        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+          {(
+            [
+              ['light', 'Light', 'sunny-outline'],
+              ['dark', 'Dark', 'moon-outline'],
+              ['system', 'Match phone', 'phone-portrait-outline'],
+            ] as [ThemeMode, string, IconName][]
+          ).map(([m, label, icon]) => (
+            <Chip key={m} label={label} icon={icon} selected={mode === m} onPress={() => setMode(m)} />
+          ))}
+        </View>
       </Card>
       <Pressable onPress={logOut}>
         <Card>
@@ -48,7 +75,7 @@ export default function Settings() {
         </Card>
       </Pressable>
       <Text variant="muted" style={{ textAlign: 'center' }}>
-        PASA prototype v1.0 · Turn Potential Into PASAbilities
+        PASA prototype v2.0 · Turn Potential Into PASAbilities
       </Text>
     </Screen>
   );

@@ -5,33 +5,33 @@ import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput,
 import { AppBar } from '@/components/AppBar';
 import { ListingCard } from '@/components/ListingCard';
 import { Button, Chip, Empty, Loading } from '@/components/ui';
+import { CATEGORIES } from '@/config';
 import { useMe } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import type { Listing } from '@/lib/types';
 import { useFocusLoad } from '@/lib/useFocusLoad';
-import { colors, font, radius, space } from '@/theme';
+import { colors, font, radius, space, themed } from '@/theme';
 
-type Filter = 'all' | 'book' | 'calculator' | 'rent' | 'sale' | 'saved';
+type Filter = 'all' | 'rent' | 'sale' | 'saved';
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all', label: 'All' },
-  { key: 'book', label: 'Books' },
-  { key: 'calculator', label: 'Calculators' },
-  { key: 'rent', label: 'For Rent' },
   { key: 'sale', label: 'For Sale' },
+  { key: 'rent', label: 'For Rent' },
   { key: 'saved', label: 'Saved' },
 ];
 
-// 3.1 · Assets: books and calculators for sale or rent
+// 3.1 · Assets: academic items for sale or rent, with category and type filters
 export default function Assets() {
   const { me } = useMe();
   const [filter, setFilter] = useState<Filter>('all');
+  const [category, setCategory] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [listings, setListings] = useState<Listing[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   const { refreshing, refresh, loaded } = useFocusLoad(async () => {
     const [{ data }, { data: favs }] = await Promise.all([
-      supabase.from('listings').select('*').neq('status', 'sold').order('created_at', { ascending: false }).limit(100),
+      supabase.from('listings').select('*').in('status', ['available', 'reserved', 'on_loan']).order('created_at', { ascending: false }).limit(200),
       supabase.from('favorites').select('listing_id').eq('user_id', me.id),
     ]);
     const now = new Date();
@@ -54,7 +54,7 @@ export default function Assets() {
 
   const q = search.trim().toLowerCase();
   const shown = listings.filter((l) => {
-    if (filter === 'book' || filter === 'calculator') { if (l.category !== filter) return false; }
+    if (category && l.category !== category) return false;
     if (filter === 'rent' || filter === 'sale') { if (l.mode !== filter) return false; }
     if (filter === 'saved' && !favorites.has(l.id)) return false;
     return !q || `${l.title} ${l.book_author} ${l.description}`.toLowerCase().includes(q);
@@ -75,13 +75,19 @@ export default function Assets() {
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Find a specific book or calculator"
+            placeholder="Search books, calculators, supplies…"
             placeholderTextColor={colors.muted}
             style={styles.searchInput}
             returnKeyType="search"
           />
           {!!search && <Ionicons name="close-circle" size={18} color={colors.muted} onPress={() => setSearch('')} />}
         </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+          <Chip label="All categories" selected={!category} onPress={() => setCategory(null)} />
+          {CATEGORIES.map((c) => (
+            <Chip key={c.key} label={c.label} icon={`${c.icon}-outline`} selected={category === c.key} onPress={() => setCategory(category === c.key ? null : c.key)} />
+          ))}
+        </ScrollView>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
           {FILTERS.map((f) => (
             <Chip key={f.key} label={f.label} selected={filter === f.key} onPress={() => setFilter(f.key)} />
@@ -100,7 +106,7 @@ export default function Assets() {
             <Empty
               icon="library-outline"
               title={q ? 'No matches' : 'No items yet'}
-              text={q ? 'Try a different title or author.' : 'Got an old book or calculator? List it for sale or rent.'}
+              text={q || category ? 'Try a different search or category.' : 'Got academic stuff you no longer need? List it for sale or rent.'}
               action={<Button title="List an item" small onPress={() => router.push('/listing/new')} />}
             />
           ) : (
@@ -119,16 +125,16 @@ export default function Assets() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   search: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: 14,
   },
   searchInput: { flex: 1, minHeight: 44, fontFamily: font.regular, fontSize: 15, color: colors.text, outlineStyle: 'none' } as object,
-});
+}));

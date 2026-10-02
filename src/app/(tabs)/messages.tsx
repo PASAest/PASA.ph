@@ -2,13 +2,15 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { AppBar } from '@/components/AppBar';
+import { StatusDot } from '@/components/StatusDot';
 import { Avatar, Empty, Loading, Text } from '@/components/ui';
 import { useMe } from '@/lib/auth';
 import { fullName, timeAgo } from '@/lib/format';
+import { useStatuses } from '@/lib/presence';
 import { supabase } from '@/lib/supabase';
 import type { Conversation, Profile } from '@/lib/types';
 import { useFocusLoad } from '@/lib/useFocusLoad';
-import { colors, space } from '@/theme';
+import { colors, space, themed } from '@/theme';
 
 type Thread = Conversation & { other?: Profile };
 
@@ -26,6 +28,7 @@ export default function Messages() {
     setThreads(convos.map((c) => ({ ...c, other: byId.get(c.user_a === me.id ? c.user_b : c.user_a) })));
   };
   const { refreshing, refresh, loaded } = useFocusLoad(load);
+  const statuses = useStatuses(threads.map((t) => t.other?.id));
 
   // Refresh the list when a new message arrives in any of my conversations.
   useEffect(() => {
@@ -54,7 +57,10 @@ export default function Messages() {
         }
         renderItem={({ item }) => (
           <Pressable onPress={() => router.push(`/chat/${item.id}`)} style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.brandSoft }]}>
-            <Avatar profile={item.other} size={50} />
+            <View>
+              <Avatar profile={item.other} size={50} />
+              <StatusDot status={statuses[item.other?.id ?? '']} size={14} />
+            </View>
             <View style={{ flex: 1, gap: 2 }}>
               <Text variant="title">{fullName(item.other)}</Text>
               <Text variant="muted" numberOfLines={1}>
@@ -71,6 +77,6 @@ export default function Messages() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: space(4), paddingVertical: space(3) },
-});
+}));

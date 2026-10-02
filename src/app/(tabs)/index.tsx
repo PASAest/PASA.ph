@@ -5,14 +5,17 @@ import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, View } fro
 import { AppBar } from '@/components/AppBar';
 import { Mascot } from '@/components/Mascot';
 import { PostCard } from '@/components/PostCard';
+import { StatusDot } from '@/components/StatusDot';
 import { UpcomingSession } from '@/components/UpcomingSession';
+import { VerifyBanner } from '@/components/VerifyBanner';
 import { Avatar, Button, Chip, Empty, Loading, Text } from '@/components/ui';
 import { useMe } from '@/lib/auth';
 import { fullName, peso } from '@/lib/format';
+import { PRESENCE_LABEL, useStatuses } from '@/lib/presence';
 import { supabase } from '@/lib/supabase';
-import type { Post, PostType, Profile } from '@/lib/types';
+import type { Post, PostType, Presence, Profile } from '@/lib/types';
 import { useFocusLoad } from '@/lib/useFocusLoad';
-import { colors, font, radius, space } from '@/theme';
+import { colors, font, radius, space, themed } from '@/theme';
 
 type Filter = 'all' | PostType | 'tutors';
 const FILTERS: { key: Filter; label: string }[] = [
@@ -48,6 +51,7 @@ export default function Home() {
     );
     setPosts(sorted);
   }, [filter]);
+  const statuses = useStatuses(tutors.map((t) => t.id));
 
   const header = (
     <View style={{ gap: space(4), paddingBottom: space(2) }}>
@@ -58,6 +62,7 @@ export default function Home() {
         </View>
         <Mascot size={70} waving />
       </View>
+      <VerifyBanner />
       <UpcomingSession />
       <Pressable onPress={() => router.push('/post/new')} style={styles.composer}>
         <Avatar profile={me} size={38} />
@@ -85,7 +90,7 @@ export default function Home() {
           ListHeaderComponent={header}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />}
           ListEmptyComponent={loaded ? <Empty icon="school-outline" title="No tutors yet" text="Be the first! Go to Profile → Become a tutor." /> : <Loading />}
-          renderItem={({ item }) => <TutorRow tutor={item} />}
+          renderItem={({ item }) => <TutorRow tutor={item} status={statuses[item.id]} />}
         />
       ) : (
         <FlatList
@@ -113,23 +118,33 @@ export default function Home() {
   );
 }
 
-function TutorRow({ tutor }: { tutor: Profile }) {
+function TutorRow({ tutor, status }: { tutor: Profile; status?: Presence }) {
   return (
     <Pressable onPress={() => router.push(`/user/${tutor.id}`)} style={styles.tutor}>
-      <Avatar profile={tutor} size={52} />
+      <View>
+        <Avatar profile={tutor} size={52} />
+        <StatusDot status={status} size={14} />
+      </View>
       <View style={{ flex: 1, gap: 3 }}>
         <Text variant="title">{fullName(tutor)}</Text>
         <Text variant="muted" numberOfLines={1}>
           {tutor.tutor_subjects.join(' · ')}
         </Text>
-        <Text style={{ fontFamily: font.bold, color: colors.primaryDark }}>{peso(tutor.tutor_rate)}/hr</Text>
+        <Text style={{ fontFamily: font.bold, color: colors.primaryDark }}>
+          {peso(tutor.tutor_rate)}/hr
+          <Text variant="muted">
+            {' · '}
+            {(tutor.tutor_modes ?? ['in_person']).map((m) => (m === 'online' ? 'Online' : 'In person')).join(' / ')}
+            {status ? ` · ${PRESENCE_LABEL[status]}` : ''}
+          </Text>
+        </Text>
       </View>
       <Button title="Book" small onPress={() => router.push(`/book/${tutor.id}`)} />
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   hello: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -143,7 +158,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: radius.pill,
     padding: 6,
     paddingRight: 14,
@@ -155,11 +170,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: colors.card,
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     padding: space(3),
   },
-});
+}));
 

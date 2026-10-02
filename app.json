@@ -12,7 +12,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#F2FBFF",
+        "backgroundColor": "#87CEEB",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -39,7 +39,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
-          "imageWidth": 200,
+          "imageWidth": 140,
           "backgroundColor": "#F2FBFF"
         }
       ],
@@ -48,7 +48,8 @@
         {
           "photosPermission": "PASA uses your photos for listing pictures and your profile photo."
         }
-      ]
+      ],
+      "expo-video"
     ],
     "scheme": "pasa",
     "experiments": {

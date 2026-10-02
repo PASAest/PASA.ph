@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
 import type { ColorValue } from 'react-native';
-import { Suspended } from '@/components/Suspended';
 import { Loading, type IconName } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { colors, font } from '@/theme';
@@ -12,11 +11,10 @@ function TabIcon({ icon, activeIcon, color, focused }: { icon: IconName; activeI
 
 // 3.x · Bottom navigation: Home, Assets, Messages, Profile
 export default function TabsLayout() {
-  const { session, profile, banned, loading } = useAuth();
+  const { session, profile, loading } = useAuth();
   if (loading) return <Loading />;
   if (!session) return <Redirect href="/welcome" />;
   if (!profile) return <Loading />;
-  if (banned) return <Suspended />;
 
   return (
     <Tabs
@@ -25,7 +23,7 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
         tabBarLabelStyle: { fontFamily: font.bold, fontSize: 11.5 },
-        tabBarStyle: { backgroundColor: colors.white, borderTopColor: colors.border },
+        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: (p) => <TabIcon icon="home-outline" activeIcon="home" {...p} /> }} />

@@ -1,18 +1,18 @@
 import { usePathname } from 'expo-router';
 import type { ReactNode } from 'react';
 import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { colors } from '@/theme';
+import { colors, themed } from '@/theme';
 
 export const PHONE_WIDTH = 430;
 
 /**
  * On a laptop browser, shows the student app in a centered phone-sized column so it looks like the mobile app.
- * Phones, narrow windows and the /admin panel render full width.
+ * Phones, narrow windows, the landing page and the /admin panel render full width.
  */
 export function PhoneFrame({ children }: { children: ReactNode }) {
   const { width } = useWindowDimensions();
   const path = usePathname();
-  const framed = Platform.OS === 'web' && width > 600 && !path.startsWith('/admin');
+  const framed = Platform.OS === 'web' && width > 600 && !path.startsWith('/admin') && path !== '/landing';
   if (!framed) return <View style={{ flex: 1 }}>{children}</View>;
   return (
     <View style={styles.backdrop}>
@@ -21,8 +21,8 @@ export function PhoneFrame({ children }: { children: ReactNode }) {
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: '#E3F2FA', alignItems: 'center', paddingVertical: 24 },
+const styles = themed(() => StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: colors.backdrop, alignItems: 'center', paddingVertical: 24 },
   phone: {
     flex: 1,
     width: PHONE_WIDTH,
@@ -37,4 +37,4 @@ const styles = StyleSheet.create({
     shadowRadius: 30,
     shadowOffset: { width: 0, height: 10 },
   },
-});
+}));

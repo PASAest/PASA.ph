@@ -62,6 +62,12 @@ begin
   end loop;
 end $$;
 
+-- Demo users are already verified students; Miguel and Bea are approved tutors.
+update public.profiles p set verification_status = 'verified'
+from auth.users u where u.id = p.id and u.email like '%@pasa.test';
+update public.profiles p set tutor_status = 'approved', tutor_modes = '{in_person,online}'
+from auth.users u where u.id = p.id and u.email in ('miguel@pasa.test', 'bea@pasa.test');
+
 -- Make admin@pasa.test an admin of the /admin panel.
 insert into public.admins (user_id)
 select id from auth.users where email = 'admin@pasa.test'

@@ -13,7 +13,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
-import { colors, font, radius, space } from '@/theme';
+import { colors, font, radius, space, themed } from '@/theme';
 import type { Profile } from '@/lib/types';
 
 export type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -46,7 +46,7 @@ type ButtonProps = {
 };
 
 export function Button({ title, onPress, variant = 'primary', icon, loading, disabled, small, style }: ButtonProps) {
-  const v = buttonVariants[variant];
+  const v = buttonVariants()[variant];
   return (
     <Pressable
       onPress={onPress}
@@ -73,13 +73,13 @@ export function Button({ title, onPress, variant = 'primary', icon, loading, dis
   );
 }
 
-const buttonVariants = {
+const buttonVariants = () => ({
   primary: { bg: colors.primary, fg: colors.white, border: colors.primary },
   outline: { bg: 'transparent', fg: colors.primary, border: colors.primary },
   ghost: { bg: 'transparent', fg: colors.primary, border: 'transparent' },
   danger: { bg: 'transparent', fg: colors.danger, border: colors.danger },
   soft: { bg: colors.brandSoft, fg: colors.primaryDark, border: colors.brandSoft },
-};
+});
 
 type FieldProps = ComponentProps<typeof TextInput> & { label?: string; error?: string; icon?: IconName };
 
@@ -177,16 +177,16 @@ export function Avatar({ profile, size = 40 }: { profile?: Pick<Profile, 'first_
   );
 }
 
-const badgeTones = {
+const badgeTones = () => ({
   green: { bg: colors.successSoft, fg: colors.success },
   yellow: { bg: colors.warningSoft, fg: colors.warning },
   red: { bg: colors.dangerSoft, fg: colors.danger },
   blue: { bg: colors.brandSoft, fg: colors.primaryDark },
-  gray: { bg: '#EEF2F5', fg: colors.muted },
-};
+  gray: { bg: colors.border, fg: colors.muted },
+});
 
-export function Badge({ label, tone = 'blue', icon }: { label: string; tone?: keyof typeof badgeTones; icon?: IconName }) {
-  const t = badgeTones[tone];
+export function Badge({ label, tone = 'blue', icon }: { label: string; tone?: keyof ReturnType<typeof badgeTones>; icon?: IconName }) {
+  const t = badgeTones()[tone];
   return (
     <View style={[styles.badge, { backgroundColor: t.bg }]}>
       {icon && <Ionicons name={icon} size={11} color={t.fg} />}
@@ -254,7 +254,7 @@ export function Divider() {
   return <View style={{ height: 1, backgroundColor: colors.border, marginVertical: space(2) }} />;
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   body: { fontFamily: font.regular, fontSize: 15, color: colors.text },
   button: {
     minHeight: 50,
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderWidth: 1.5,
     borderColor: colors.border,
     borderRadius: radius.md,
@@ -286,13 +286,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: radius.pill,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderWidth: 1.5,
     borderColor: colors.border,
   },
   chipText: { fontFamily: font.semibold, fontSize: 13.5, color: colors.primaryDark },
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: space(4),
     borderWidth: 1,
@@ -328,4 +328,4 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: radius.sm,
   },
-});
+}));

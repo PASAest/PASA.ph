@@ -1,9 +1,8 @@
 import { router } from 'expo-router';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Mascot } from '@/components/Mascot';
+import { Logo } from '@/components/Logo';
 import { Button, Text } from '@/components/ui';
-import { SCHOOL_NAME } from '@/config';
 import { colors, font, space } from '@/theme';
 
 // 1 · Welcome: Sign Up on top, Log In below.
@@ -12,13 +11,13 @@ export default function Welcome() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg, padding: space(6), paddingBottom: insets.bottom + space(6) }}>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-        <Mascot size={170} waving />
+        <Logo size={130} />
         <Text style={{ fontFamily: font.black, fontSize: 44, color: colors.primaryDark, letterSpacing: 3 }}>PASA</Text>
         <Text style={{ fontFamily: font.semibold, fontSize: 16, color: colors.muted, textAlign: 'center' }}>
           Turn Potential Into <Text style={{ fontFamily: font.black, color: colors.primary }}>PASA</Text>bilities
         </Text>
         <Text variant="muted" style={{ textAlign: 'center', marginTop: 12, maxWidth: 300 }}>
-          Find a tutor, share what you know, and trade books and calculators with fellow students at {SCHOOL_NAME}.
+          Find a tutor, share what you know, and trade academic items with fellow college students in Santa Rosa.
         </Text>
       </View>
       <View style={{ gap: space(3) }}>

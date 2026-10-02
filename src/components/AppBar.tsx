@@ -5,8 +5,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
-import { colors, font, space } from '@/theme';
-import { Mascot } from './Mascot';
+import { colors, font, space, themed } from '@/theme';
+import { Logo } from './Logo';
 import { Text } from './ui';
 
 /** Top bar used on the main tabs: small logo + PASA wordmark, optional action, and the notification bell. */
@@ -16,9 +16,7 @@ export function AppBar({ action }: { action?: ReactNode }) {
   return (
     <View style={[styles.bar, { paddingTop: insets.top + 6 }]}>
       <View style={styles.logo}>
-        <View style={styles.logoBubble}>
-          <Mascot size={26} />
-        </View>
+        <Logo size={34} />
         <Text style={styles.word}>PASA</Text>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
@@ -63,7 +61,7 @@ function useUnreadCount() {
   return count;
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -73,17 +71,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   logo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logoBubble: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.white,
-    borderWidth: 1.5,
-    borderColor: colors.brand,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
   word: { fontFamily: font.black, fontSize: 22, color: colors.primaryDark, letterSpacing: 1 },
   dot: {
     position: 'absolute',
@@ -98,4 +85,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   dotText: { color: colors.white, fontSize: 10.5, fontFamily: font.bold },
-});
+}));

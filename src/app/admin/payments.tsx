@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { AdminPage } from '@/components/admin/AdminShell';
 import { DataTable, StatTile, TileGrid } from '@/components/admin/widgets';
-import { METHODS, type PayMethod } from '@/components/FakeWallet';
+import { METHODS, methodLabel } from '@/components/FakeWallet';
 import { Badge, Button, Chip, Loading, Row, Text } from '@/components/ui';
+import { confirm, notify } from '@/lib/actions';
 import { exportCsv } from '@/lib/admin';
 import { dateTime, fullName, peso } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
-import type { Profile } from '@/lib/types';
+import type { Payout, Profile } from '@/lib/types';
 import { useFocusLoad } from '@/lib/useFocusLoad';
 import { font } from '@/theme';
 
@@ -15,7 +16,7 @@ type PayStatus = 'held' | 'released' | 'refunded' | 'paid';
 type Payment = {
   id: string;
   ref_type: RefType;
-  method: PayMethod;
+  method: string;
   amount: number;
   fee: number;
   reference_no: string;
@@ -37,17 +38,69 @@ export default function Payments() {
   const [payments, setPayments] = useState<Payment[] | null>(null);
   const [type, setType] = useState<RefType | 'all'>('all');
   const [status, setStatus] = useState<PayStatus | 'all'>('all');
+  const [view, setView] = useState<'payments' | 'payouts'>('payments');
+  const [payouts, setPayouts] = useState<Payout[]>([]);
 
-  useFocusLoad(async () => {
-    const { data } = await supabase
-      .from('payments')
-      .select('*, payer:profiles!payments_payer_id_fkey(*), payee:profiles!payments_payee_id_fkey(*)')
-      .order('created_at', { ascending: false })
-      .limit(1000);
-    setPayments((data as Payment[]) ?? []);
-  });
+  const load = async () => {
+    const [p, w] = await Promise.all([
+      supabase
+        .from('payments')
+        .select('*, payer:profiles!payments_payer_id_fkey(*), payee:profiles!payments_payee_id_fkey(*)')
+        .order('created_at', { ascending: false })
+        .limit(1000),
+      supabase.from('payouts').select('*, user:profiles!payouts_user_id_fkey(*)').order('created_at', { ascending: false }),
+    ]);
+    setPayments((p.data as Payment[]) ?? []);
+    setPayouts((w.data as Payout[]) ?? []);
+  };
+  useFocusLoad(load);
+
+  const setPayout = async (p: Payout, next: 'paid' | 'rejected') => {
+    const msg = next === 'paid' ? `Mark ${peso(p.amount)} as sent to ${p.account_name}'s ${METHODS[p.method].label} (${p.account_number})?` : 'The amount goes back to their wallet balance.';
+    if (!(await confirm(next === 'paid' ? 'Mark as sent?' : 'Reject withdrawal?', msg, next === 'paid' ? 'Mark sent' : 'Reject'))) return;
+    const { error } = await supabase.from('payouts').update({ status: next }).eq('id', p.id);
+    if (error) return notify('Could not update', error.message);
+    load();
+  };
 
   if (!payments) return <Loading />;
+  const requested = payouts.filter((p) => p.status === 'requested');
+
+  if (view === 'payouts') {
+    return (
+      <AdminPage title="Payments & payouts" subtitle="Withdrawals tutors and sellers requested from their wallets (demo: send them manually).">
+        <Row>
+          <Chip label="Payments" selected={false} onPress={() => setView('payments')} />
+          <Chip label={`Payouts (${requested.length} to send)`} selected onPress={() => setView('payouts')} />
+        </Row>
+        <DataTable
+          rows={payouts}
+          rowKey={(p) => p.id}
+          empty="No withdrawal requests yet."
+          columns={[
+            { key: 'who', label: 'Tutor / seller', flex: 1.4, render: (p) => <Text style={{ fontFamily: font.bold }}>{fullName(p.user)}</Text> },
+            { key: 'to', label: 'Send to', flex: 1.6, render: (p) => <Text variant="muted">{`${METHODS[p.method].label} · ${p.account_name} · ${p.account_number}`}</Text> },
+            { key: 'amount', label: 'Amount', flex: 0.8, render: (p) => <Text style={{ fontFamily: font.semibold }}>{peso(p.amount)}</Text> },
+            { key: 'date', label: 'Requested', flex: 1.1, render: (p) => <Text variant="muted">{dateTime(p.created_at)}</Text> },
+            {
+              key: 'status',
+              label: 'Status',
+              width: 200,
+              render: (p) =>
+                p.status === 'requested' ? (
+                  <Row gap={6}>
+                    <Button title="Mark sent" small onPress={() => setPayout(p, 'paid')} />
+                    <Button title="Reject" small variant="ghost" onPress={() => setPayout(p, 'rejected')} />
+                  </Row>
+                ) : (
+                  <Badge label={p.status === 'paid' ? 'Sent' : 'Rejected'} tone={p.status === 'paid' ? 'green' : 'red'} />
+                ),
+            },
+          ]}
+        />
+      </AdminPage>
+    );
+  }
   const shown = payments.filter((p) => (type === 'all' || p.ref_type === type) && (status === 'all' || p.status === status));
   const sum = (f: (p: Payment) => number) => shown.reduce((s, p) => s + f(p), 0);
 
@@ -68,7 +121,7 @@ export default function Payments() {
                 date: p.created_at,
                 reference: p.reference_no,
                 type: TYPE_LABEL[p.ref_type],
-                method: METHODS[p.method].label,
+                method: methodLabel(p.method),
                 payer: fullName(p.payer),
                 payee: p.payee ? fullName(p.payee) : 'PASA',
                 amount: p.amount,
@@ -81,6 +134,10 @@ export default function Payments() {
         />
       }
     >
+      <Row>
+        <Chip label="Payments" selected onPress={() => setView('payments')} />
+        <Chip label={`Payouts (${requested.length} to send)`} selected={false} onPress={() => setView('payouts')} />
+      </Row>
       <TileGrid>
         <StatTile icon="receipt-outline" label="Payments" value={String(shown.length)} />
         <StatTile icon="swap-horizontal-outline" label="Total paid" value={peso(sum((p) => (p.status === 'refunded' ? 0 : p.amount)))} note="Excludes refunds" />
@@ -111,7 +168,7 @@ export default function Payments() {
                 <Text style={{ fontFamily: font.bold }}>{TYPE_LABEL[p.ref_type]}</Text>
                 {'\n'}
                 <Text variant="muted" style={{ fontSize: 12.5 }}>
-                  {p.reference_no} · {METHODS[p.method].label}
+                  {p.reference_no} · {methodLabel(p.method)}
                 </Text>
               </Text>
             ),

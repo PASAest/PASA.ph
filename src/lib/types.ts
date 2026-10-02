@@ -13,7 +13,20 @@ export type Profile = {
   tutor_about: string;
   plus_until: string | null;
   created_at: string;
+  verification_status: 'unverified' | 'pending' | 'verified' | 'rejected';
+  id_doc_path: string | null;
+  cor_doc_path: string | null;
+  cv_doc_path: string | null;
+  tutor_status: 'none' | 'pending' | 'approved' | 'rejected';
+  tutor_modes: TutorMode[];
+  rejection_note: string;
+  plus_trial_used: boolean;
+  plus_boosts_left: number;
+  last_seen_at: string | null;
 };
+
+export type TutorMode = 'in_person' | 'online';
+export type Presence = 'online' | 'offline' | 'on_session';
 
 export type PostType = 'need_tutor' | 'offer_tutoring' | 'general';
 
@@ -40,12 +53,12 @@ export type Comment = {
   author?: Profile;
 };
 
-export type ListingStatus = 'available' | 'reserved' | 'on_loan' | 'sold';
+export type ListingStatus = 'pending_review' | 'available' | 'reserved' | 'on_loan' | 'sold' | 'rejected';
 
 export type Listing = {
   id: string;
   seller_id: string;
-  category: 'book' | 'calculator';
+  category: string;
   mode: 'sale' | 'rent';
   title: string;
   book_author: string;
@@ -57,6 +70,7 @@ export type Listing = {
   meetup_spot: string;
   status: ListingStatus;
   boosted_until: string | null;
+  review_note: string;
   created_at: string;
   seller?: Profile;
 };
@@ -71,6 +85,9 @@ export type Booking = {
   starts_at: string;
   duration_min: number;
   location: string;
+  mode: TutorMode;
+  platform: string;
+  meeting_link: string;
   notes: string;
   amount: number;
   fee: number;
@@ -111,7 +128,21 @@ export type Message = {
   conversation_id: string;
   sender_id: string;
   body: string;
+  attachment_path: string | null;
+  attachment_type: 'image' | 'video' | null;
   created_at: string;
+};
+
+export type Payout = {
+  id: string;
+  user_id: string;
+  amount: number;
+  method: 'gcash' | 'maya';
+  account_name: string;
+  account_number: string;
+  status: 'requested' | 'paid' | 'rejected';
+  created_at: string;
+  user?: Profile;
 };
 
 export type Notification = {

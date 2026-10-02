@@ -8,7 +8,8 @@ import { MenuSheet, type MenuItem } from '@/components/MenuSheet';
 import { Screen } from '@/components/Screen';
 import { Avatar, Badge, Button, Card, Loading, Row, Text } from '@/components/ui';
 import { confirm, openChat } from '@/lib/actions';
-import { useMe } from '@/lib/auth';
+import { categoryOf, DELIVERY_NOTE } from '@/config';
+import { requireVerified, useMe } from '@/lib/auth';
 import { fullName, peso, yearLabel } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
 import type { Comment, Listing } from '@/lib/types';
@@ -59,7 +60,7 @@ export default function ListingDetail() {
   return (
     <Screen
       back
-      title={listing.category === 'book' ? 'Book' : 'Calculator'}
+      title={categoryOf(listing.category).label}
       refreshing={refreshing}
       onRefresh={refresh}
       right={<Button title="•••" variant="ghost" small onPress={() => setMenu(true)} />}
@@ -80,7 +81,7 @@ export default function ListingDetail() {
               icon={available ? 'bag-check-outline' : undefined}
               disabled={!available}
               style={{ flex: 1 }}
-              onPress={() => router.push({ pathname: '/checkout', params: { type: 'order', listingId: listing.id } })}
+              onPress={() => requireVerified(me) && router.push({ pathname: '/checkout', params: { type: 'order', listingId: listing.id } })}
             />
           </Row>
         )
@@ -89,6 +90,16 @@ export default function ListingDetail() {
       <View style={{ borderRadius: radius.lg, overflow: 'hidden' }}>
         <ListingPhoto listing={listing} height={240} />
       </View>
+      {mine && (listing.status === 'pending_review' || listing.status === 'rejected') && (
+        <Card style={{ backgroundColor: listing.status === 'rejected' ? colors.dangerSoft : colors.brandSoft, borderColor: 'transparent', gap: 4 }}>
+          <Text variant="title">{listing.status === 'rejected' ? 'Not approved' : 'Waiting for admin approval'}</Text>
+          <Text variant="muted">
+            {listing.status === 'rejected'
+              ? listing.review_note || 'This listing breaks the Assets rules. Edit it and save to send it for review again.'
+              : 'Only you can see this listing until the PASA team approves it.'}
+          </Text>
+        </Card>
+      )}
       <View style={{ gap: 6 }}>
         <Row style={{ flexWrap: 'wrap' }} gap={6}>
           <Badge label={status.label} tone={status.tone} />
@@ -110,11 +121,9 @@ export default function ListingDetail() {
         </Card>
       )}
       <Card style={{ gap: 6 }}>
-        <Row>
-          <Ionicons name="location-outline" size={18} color={colors.primary} />
-          <Text>
-            Meetup at <Text style={{ fontFamily: font.bold }}>{listing.meetup_spot || 'campus'}</Text>
-          </Text>
+        <Row style={{ alignItems: 'flex-start' }}>
+          <Ionicons name="cube-outline" size={18} color={colors.primary} />
+          <Text style={{ flex: 1 }}>{DELIVERY_NOTE}</Text>
         </Row>
         <Row>
           <Ionicons name="shield-checkmark-outline" size={18} color={colors.success} />

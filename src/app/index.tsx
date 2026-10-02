@@ -1,7 +1,7 @@
 import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Animated, View } from 'react-native';
-import { Mascot } from '@/components/Mascot';
+import { Animated, Platform, View } from 'react-native';
+import { Logo } from '@/components/Logo';
 import { Text } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { colors, font } from '@/theme';
@@ -18,12 +18,13 @@ export default function Splash() {
     return () => clearTimeout(t);
   }, [fade]);
 
-  if (done && !loading) return <Redirect href={session ? '/(tabs)' : '/welcome'} />;
+  // On the web, visitors who aren't signed in see the landing page first.
+  if (done && !loading) return <Redirect href={session ? '/(tabs)' : Platform.OS === 'web' ? '/landing' : '/welcome'} />;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
       <Animated.View style={{ opacity: fade, alignItems: 'center', gap: 12, transform: [{ scale: fade.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) }] }}>
-        <Mascot size={150} waving />
+        <Logo size={120} />
         <Text style={{ fontFamily: font.black, fontSize: 44, color: colors.primaryDark, letterSpacing: 3 }}>PASA</Text>
         <Text style={{ fontFamily: font.semibold, fontSize: 16, color: colors.muted }}>
           Turn Potential Into <Text style={{ fontFamily: font.black, color: colors.primary }}>PASA</Text>bilities

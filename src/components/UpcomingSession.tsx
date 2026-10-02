@@ -49,7 +49,7 @@ export function UpcomingSession() {
           gap: 12,
           padding: space(3),
           borderRadius: radius.lg,
-          backgroundColor: urgent ? colors.warningSoft : colors.white,
+          backgroundColor: urgent ? colors.warningSoft : colors.surface,
           borderWidth: 1.5,
           borderColor: urgent ? colors.warning : colors.border,
         }}
@@ -60,7 +60,7 @@ export function UpcomingSession() {
             {when} · {next.subject}
           </Text>
           <Text variant="muted">
-            With {fullName(other)} at {next.location}
+            With {fullName(other)} · {next.mode === 'online' ? `Online via ${next.platform}` : next.location}
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.muted} />

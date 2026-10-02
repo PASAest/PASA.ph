@@ -56,7 +56,7 @@ export default function Notifications() {
               flexDirection: 'row',
               gap: 12,
               padding: space(4),
-              backgroundColor: pressed ? colors.brandSoft : n.read ? 'transparent' : colors.white,
+              backgroundColor: pressed ? colors.brandSoft : n.read ? 'transparent' : colors.surface,
               borderBottomWidth: 1,
               borderBottomColor: colors.border,
             })}
