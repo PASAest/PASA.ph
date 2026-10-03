@@ -1,8 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
+import { CalendarPicker } from '@/components/CalendarPicker';
 import { Screen } from '@/components/Screen';
-import { Avatar, Button, Card, ChipSelect, Divider, Field, Loading, Row, Text } from '@/components/ui';
+import { SelectField } from '@/components/SelectField';
+import { TimeField } from '@/components/TimeField';
+import { Avatar, Button, Card, Divider, Field, type IconName, Loading, Row, Text } from '@/components/ui';
 import { CANCEL_CUTOFF_MIN, PLATFORMS } from '@/config';
 import { notify } from '@/lib/actions';
 import { requireVerified, useMe } from '@/lib/auth';
@@ -14,34 +17,25 @@ import { toast } from '@/lib/toast';
 import type { Profile } from '@/lib/types';
 import { colors, font } from '@/theme';
 
-const DURATIONS = [60, 90, 120];
-const TIMES = ['8:00', '9:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+const DURATIONS = [60, 90, 120, 180];
+const durationLabel = (m: number) => (m === 60 ? '1 hour' : `${m / 60} hours`);
+const PLATFORM_ICONS: Record<string, IconName> = { Zoom: 'videocam-outline', 'Google Meet': 'logo-google', 'MS Teams': 'people-outline' };
 
-const nextDays = () =>
-  Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + i);
-    return d.toISOString();
-  });
-
-const dayLabel = (iso: string, i: number) =>
-  i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : new Date(iso).toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric' });
-
-const timeLabel = (t: string) => {
-  const [h, m] = t.split(':').map(Number);
-  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+const tomorrow = () => {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
 };
+const isToday = (d: Date) => d.toDateString() === new Date().toDateString();
 
 // 3.5 · Book a tutor: subject, platform (Zoom / Google Meet / MS Teams), date/time, duration. Tutoring is online only.
 export default function BookTutor() {
   const { tutorId } = useLocalSearchParams<{ tutorId: string }>();
   const { me } = useMe();
   const [tutor, setTutor] = useState<Profile | null>(null);
-  const days = useMemo(() => nextDays(), []);
   const [subject, setSubject] = useState<string | null>(null);
-  const [day, setDay] = useState<string>(days[1]);
+  const [day, setDay] = useState<Date>(tomorrow);
   const [time, setTime] = useState<string | null>(null);
+  const [customTime, setCustomTime] = useState(false);
   const [duration, setDuration] = useState(60);
   const { settings } = useSettings();
   const [platform, setPlatform] = useState<string>(PLATFORMS[0]);
@@ -59,6 +53,10 @@ export default function BookTutor() {
 
   const amount = Math.round((tutor.tutor_rate * duration) / 60);
   const fee = serviceFee(amount, settings, me);
+
+  // On today, times earlier than the booking cut-off are shown as passed.
+  const now = new Date();
+  const earliest = isToday(day) ? now.getHours() * 60 + now.getMinutes() + CANCEL_CUTOFF_MIN : 0;
 
   const startsAt = () => {
     if (!time) return null;
@@ -109,11 +107,44 @@ export default function BookTutor() {
           </View>
         </Row>
       </Card>
-      <ChipSelect label="Subject" options={tutor.tutor_subjects} value={subject} onChange={setSubject} />
-      <ChipSelect label="Day" options={days} value={day} onChange={setDay} format={(d) => dayLabel(d, days.indexOf(d))} />
-      <ChipSelect label="Start time" options={TIMES} value={time} onChange={setTime} format={timeLabel} />
-      <ChipSelect label="Duration" options={DURATIONS} value={duration} onChange={setDuration} format={(m) => (m === 60 ? '1 hour' : `${m / 60} hours`)} />
-      <ChipSelect label="Platform" options={PLATFORMS} value={platform} onChange={setPlatform} />
+      <SelectField
+        label="Subject"
+        icon="book-outline"
+        placeholder="Choose a subject"
+        value={subject}
+        onChange={setSubject}
+        options={tutor.tutor_subjects.map((s) => ({ value: s, label: s, icon: 'book-outline' as IconName }))}
+      />
+      <View style={{ gap: 6 }}>
+        <Row style={{ justifyContent: 'space-between' }}>
+          <Text variant="label">Day</Text>
+          <Text variant="muted" style={{ fontSize: 13 }}>
+            {isToday(day) ? 'Today, ' : ''}
+            {day.toLocaleDateString('en-PH', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </Text>
+        </Row>
+        <CalendarPicker value={day} onChange={setDay} />
+      </View>
+      <TimeField label="Start time" value={time} onChange={setTime} earliest={earliest} custom={customTime} onCustomChange={setCustomTime} />
+      <Row gap={12} style={{ alignItems: 'flex-start' }}>
+        <View style={{ flex: 1 }}>
+          <SelectField
+            label="Duration"
+            icon="hourglass-outline"
+            value={duration}
+            onChange={setDuration}
+            options={DURATIONS.map((m) => ({ value: m, label: durationLabel(m), hint: peso(Math.round((tutor.tutor_rate * m) / 60)) }))}
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <SelectField
+            label="Platform"
+            value={platform}
+            onChange={setPlatform}
+            options={PLATFORMS.map((p) => ({ value: p, label: p, icon: PLATFORM_ICONS[p] }))}
+          />
+        </View>
+      </Row>
       <Text variant="muted" style={{ marginTop: -8 }}>
         {tutor.first_name} will add the meeting link after accepting.
       </Text>
