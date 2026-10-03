@@ -142,6 +142,11 @@ export default function Landing() {
   // then navigate once the rebuild has settled.
   const open = (href: '/welcome' | '/log-in' | '/terms' | '/admin') => {
     if (theme.scheme === mode) return router.navigate(href);
+    // The choice is already saved (toggleMode); on the web a fresh page load picks it up everywhere.
+    if (IS_WEB) {
+      window.location.assign(href);
+      return;
+    }
     theme.setMode(mode);
     setTimeout(() => router.navigate(href), 200);
   };

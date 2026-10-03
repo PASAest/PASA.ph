@@ -1,6 +1,6 @@
 import { router, usePathname, type Href } from 'expo-router';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 import { applyScheme, saveMode, storedMode, type Scheme, type ThemeMode } from '@/theme';
 
 type ThemeState = { mode: ThemeMode; scheme: Scheme; setMode: (m: ThemeMode, opts?: { returnHere?: boolean }) => void };
@@ -26,6 +26,12 @@ export function ThemeProvider({ children }: { children: (scheme: Scheme) => Reac
 
   const setMode = (m: ThemeMode, { returnHere = true }: { returnHere?: boolean } = {}) => {
     saveMode(m);
+    // Web: reload in the new theme. Rebuilding the navigator in place blanks the page in the browser,
+    // while a reload keeps the URL and the saved login, and every style starts fresh.
+    if (Platform.OS === 'web') {
+      window.location.reload();
+      return;
+    }
     returnTo.current = returnHere ? path : null;
     setModeState(m);
   };
