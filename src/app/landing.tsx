@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef,
 import { Animated, Easing, Linking, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type TextStyle } from 'react-native';
 import { Reveal, useCountUp, useReducedMotion, useRevealScroll } from '@/components/landing/Motion';
 import { PromoVideo } from '@/components/landing/PromoVideo';
+import { StoreBadges } from '@/components/landing/StoreBadges';
 import { Logo } from '@/components/Logo';
 import { Loading, Text, type IconName } from '@/components/ui';
 import { ANDROID_APK_URL, CATEGORIES, CONTACT_EMAIL, FACEBOOK_URL, PROGRAMS, SCHOOLS, SUBJECTS } from '@/config';
@@ -239,6 +240,7 @@ export default function Landing() {
                 </Pressable>
               )}
             </View>
+            <StoreBadges />
           </View>
           <View style={wide ? { width: 520, height: 560 } : { width: '100%', maxWidth: 420, height: 720, alignSelf: 'center' }}>
             <Board wide={wide} />
@@ -438,6 +440,9 @@ export default function Landing() {
             <View style={{ flex: 1, gap: 10 }}>
               <Text style={[styles.h2, { color: '#fff', fontSize: wide ? 40 : 30 }]}>Your next sem starts here.</Text>
               <Text style={{ color: '#C6D6E3', fontSize: 17, lineHeight: 26 }}>Free to join for college students in Santa Rosa, Laguna.</Text>
+              <View style={{ marginTop: 10 }}>
+                <StoreBadges />
+              </View>
             </View>
             <Btn title="Create a free account" onPress={start} light />
           </View>

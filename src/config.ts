@@ -104,3 +104,7 @@ export const DELIVERY_NOTE = 'Delivery is by internal arrangement. Agree on how 
 export const CONTACT_EMAIL = '';
 export const FACEBOOK_URL = '';
 export const ANDROID_APK_URL = '';
+// Store badges on the landing page. PASA isn't listed yet, so these open the stores themselves.
+// Swap in the app's own store pages once it's published.
+export const PLAY_STORE_URL = 'https://play.google.com/store/apps';
+export const APP_STORE_URL = 'https://www.apple.com/app-store/';
