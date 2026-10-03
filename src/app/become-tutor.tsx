@@ -91,7 +91,7 @@ export default function BecomeTutor() {
     >
       <Row>
         <Text variant="label">Status:</Text>
-        <Badge label={STATUS[me.tutor_status].label} tone={STATUS[me.tutor_status].tone} />
+        <Badge label={(STATUS[me.tutor_status] ?? STATUS.none).label} tone={(STATUS[me.tutor_status] ?? STATUS.none).tone} />
       </Row>
       {me.tutor_status === 'rejected' && !!me.rejection_note && (
         <Card style={{ backgroundColor: colors.dangerSoft, borderColor: colors.dangerSoft }}>

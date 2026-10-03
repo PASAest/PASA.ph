@@ -1,4 +1,5 @@
 import { Redirect, Tabs } from 'expo-router';
+import { DbUpdateNeeded } from '@/components/DbUpdateNeeded';
 import { TabBar } from '@/components/TabBar';
 import { Loading } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
@@ -9,6 +10,8 @@ export default function TabsLayout() {
   if (loading) return <Loading />;
   if (!session) return <Redirect href="/welcome" />;
   if (!profile) return <Loading />;
+  // Profiles gained these columns in the v2 schema; without them the app can't work properly.
+  if (profile.verification_status === undefined) return <DbUpdateNeeded />;
 
   return (
     <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>

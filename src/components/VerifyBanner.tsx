@@ -14,6 +14,7 @@ export function VerifyBanner() {
     pending: { title: 'Verification in progress', body: 'The PASA team is checking your ID and COR. You can browse meanwhile.', tone: colors.warning },
     rejected: { title: 'Please re-upload your documents', body: me.rejection_note || 'We couldn\'t verify your ID or COR.', tone: colors.danger },
   }[me.verification_status];
+  if (!copy) return null;
   return (
     <Pressable onPress={() => router.push('/verify')}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: space(3), borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: copy.tone }}>
