@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { Screen } from '@/components/Screen';
-import { Badge, Card, Chip, Text, type IconName } from '@/components/ui';
+import { Badge, Card, Text, type IconName } from '@/components/ui';
+import { SelectField } from '@/components/SelectField';
 import { confirm } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
@@ -54,17 +55,18 @@ export default function Settings() {
       </Card>
       <Card style={{ gap: space(3) }}>
         <Text variant="title">Appearance</Text>
-        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-          {(
+        <SelectField<ThemeMode>
+          sheetTitle="Appearance"
+          value={mode}
+          onChange={setMode}
+          options={(
             [
               ['light', 'Light', 'sunny-outline'],
               ['dark', 'Dark', 'moon-outline'],
               ['system', 'Match phone', 'phone-portrait-outline'],
             ] as [ThemeMode, string, IconName][]
-          ).map(([m, label, icon]) => (
-            <Chip key={m} label={label} icon={icon} selected={mode === m} onPress={() => setMode(m)} />
-          ))}
-        </View>
+          ).map(([m, label, icon]) => ({ value: m, label, icon }))}
+        />
       </Card>
       <Pressable onPress={logOut}>
         <Card>

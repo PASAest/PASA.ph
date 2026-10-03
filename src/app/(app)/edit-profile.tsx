@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { PhotoPicker } from '@/components/PhotoPicker';
 import { Screen } from '@/components/Screen';
 import { Select } from '@/components/Select';
-import { Button, ChipSelect, Field } from '@/components/ui';
+import { SelectField } from '@/components/SelectField';
+import { Button, Field } from '@/components/ui';
 import { PROGRAMS, YEAR_LEVELS } from '@/config';
 import { notify } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
@@ -66,7 +67,7 @@ export default function EditProfile() {
       <Field label="First name" value={first} onChangeText={setFirst} />
       <Field label="Last name" value={last} onChangeText={setLast} />
       <Select label="Program / Course" options={PROGRAMS} value={program} onChange={setProgram} icon="ribbon-outline" />
-      <ChipSelect label="Year level" options={YEAR_LEVELS} value={year} onChange={setYear} format={yearLabel} />
+      <SelectField label="Year level" icon="layers-outline" value={year} onChange={setYear} options={YEAR_LEVELS.map((y) => ({ value: y, label: yearLabel(y) }))} />
       <Field label="Bio" value={bio} onChangeText={setBio} multiline maxLength={200} />
     </Screen>
   );

@@ -1,9 +1,9 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView } from 'react-native';
 import { AdminPage } from '@/components/admin/AdminShell';
 import { DataTable, SearchBox } from '@/components/admin/widgets';
-import { Avatar, Badge, Button, Chip, Loading, Row, Text } from '@/components/ui';
+import { Avatar, Badge, Button, Loading, Row, Text } from '@/components/ui';
+import { FilterDropdown } from '@/components/FilterDropdown';
 import { confirm, notify } from '@/lib/actions';
 import { ask, banUser, exportCsv, unbanUser, type AdminUser } from '@/lib/admin';
 import { useAuth } from '@/lib/auth';
@@ -92,11 +92,18 @@ export default function Users() {
     >
       <Row style={{ flexWrap: 'wrap' }} gap={12}>
         <SearchBox value={search} onChange={setSearch} placeholder="Search name, email or program" />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-          {(['all', 'tutors', 'plus', 'banned'] as Filter[]).map((f) => (
-            <Chip key={f} label={`${f === 'plus' ? 'PASA Plus' : f[0].toUpperCase() + f.slice(1)} (${counts[f]})`} selected={filter === f} onPress={() => setFilter(f)} />
-          ))}
-        </ScrollView>
+        <FilterDropdown
+          title="Show"
+          icon="people-outline"
+          value={filter}
+          allValue="all"
+          onChange={setFilter}
+          options={(['all', 'tutors', 'plus', 'banned'] as Filter[]).map((f) => ({
+            value: f,
+            label: f === 'all' ? 'All users' : f === 'plus' ? 'PASA Plus' : f[0].toUpperCase() + f.slice(1),
+            count: counts[f],
+          }))}
+        />
       </Row>
       <DataTable
         rows={shown}

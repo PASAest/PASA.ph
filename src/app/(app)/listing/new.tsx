@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { PhotoPicker } from '@/components/PhotoPicker';
 import { Screen } from '@/components/Screen';
-import { Button, Card, ChipSelect, Field, Row, Text } from '@/components/ui';
+import { SelectField } from '@/components/SelectField';
+import { Button, Card, Field, type IconName, Row, Text } from '@/components/ui';
 import { CATEGORIES, categoryOf, DELIVERY_NOTE, type CategoryKey } from '@/config';
 import { notify } from '@/lib/actions';
 import { requireVerified, useMe } from '@/lib/auth';
@@ -15,8 +16,17 @@ import { toast } from '@/lib/toast';
 import { uploadImage, type Picked } from '@/lib/upload';
 import { colors } from '@/theme';
 
-const MODES = ['sale', 'rent'] as const;
-const CONDITIONS = ['Brand new', 'Like new', 'Good', 'Fair', 'Well-loved'];
+const MODES = [
+  { value: 'sale' as const, label: 'For sale', icon: 'pricetag-outline' as IconName, hint: 'The buyer keeps it' },
+  { value: 'rent' as const, label: 'For rent', icon: 'repeat-outline' as IconName, hint: 'Weekly rent with a refundable deposit' },
+];
+const CONDITIONS = [
+  { value: 'Brand new', label: 'Brand new', hint: 'Unused, still sealed or in its box' },
+  { value: 'Like new', label: 'Like new', hint: 'Used briefly, no visible wear' },
+  { value: 'Good', label: 'Good', hint: 'Normal use, minor marks' },
+  { value: 'Fair', label: 'Fair', hint: 'Visible wear, works fine' },
+  { value: 'Well-loved', label: 'Well-loved', hint: 'Heavily used, priced to match' },
+];
 
 // 3.1a · Create or edit a listing (academic items). Photos and flagged listings wait for admin approval.
 export default function ListingForm() {
@@ -114,8 +124,13 @@ export default function ListingForm() {
         uploading={uploading}
         allowRemove
       />
-      <ChipSelect label="Category" options={CATEGORIES.map((c) => c.key)} value={category} onChange={setCategory} format={(k) => categoryOf(k).label} />
-      <ChipSelect label="Sell or rent out?" options={MODES} value={mode} onChange={setMode} format={(m) => (m === 'sale' ? 'For sale' : 'For rent')} />
+      <SelectField
+        label="Category"
+        value={category}
+        onChange={setCategory}
+        options={CATEGORIES.map((c) => ({ value: c.key, label: categoryOf(c.key).label, icon: `${c.icon}-outline` as IconName }))}
+      />
+      <SelectField label="Sell or rent out?" value={mode} onChange={setMode} options={MODES} />
       <Field label="Title" placeholder={category === 'book' ? 'Advanced Algebra, 4th Ed.' : category === 'calculator' ? 'Casio fx-991ES Plus' : 'e.g. Lab gown, medium'} value={form.title} onChangeText={set('title')} />
       {category === 'book' && <Field label="Author" placeholder="e.g. Valix, Peralta" value={form.author} onChangeText={set('author')} />}
       <Row gap={12} style={{ alignItems: 'flex-start' }}>
@@ -128,7 +143,7 @@ export default function ListingForm() {
           </View>
         )}
       </Row>
-      <ChipSelect label="Condition" options={CONDITIONS} value={condition} onChange={setCondition} />
+      <SelectField label="Condition" icon="sparkles-outline" value={condition} onChange={setCondition} options={CONDITIONS} />
       <Field label="Description" placeholder="Edition, size, what's included, any marks or wear…" value={form.description} onChangeText={set('description')} multiline />
       <Row style={{ alignItems: 'flex-start' }}>
         <Ionicons name="cube-outline" size={18} color={colors.muted} />

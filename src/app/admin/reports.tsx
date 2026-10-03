@@ -1,8 +1,9 @@
 import { router, type Href } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 import { AdminPage } from '@/components/admin/AdminShell';
-import { Badge, Button, Card, Chip, Empty, Loading, Row, Text } from '@/components/ui';
+import { Badge, Button, Card, Empty, Loading, Row, Text } from '@/components/ui';
+import { FilterDropdown, type FilterOption } from '@/components/FilterDropdown';
 import { confirm, notify } from '@/lib/actions';
 import { ask, banUser } from '@/lib/admin';
 import { useAuth } from '@/lib/auth';
@@ -25,11 +26,11 @@ type Report = {
 };
 type Target = { summary: string; ownerId: string | null; ownerName: string; href: Href | null; exists: boolean };
 
-const FILTERS: { key: Status | 'all'; label: string }[] = [
-  { key: 'open', label: 'Open' },
-  { key: 'resolved', label: 'Resolved' },
-  { key: 'dismissed', label: 'Dismissed' },
-  { key: 'all', label: 'All' },
+const FILTERS: FilterOption<Status | 'all'>[] = [
+  { value: 'open', label: 'Open', icon: 'alert-circle-outline' },
+  { value: 'resolved', label: 'Resolved', icon: 'checkmark-done-outline' },
+  { value: 'dismissed', label: 'Dismissed', icon: 'close-circle-outline' },
+  { value: 'all', label: 'All reports', icon: 'list-outline' },
 ];
 
 // /admin/reports · Review what students reported
@@ -95,11 +96,9 @@ export default function Reports() {
 
   return (
     <AdminPage title="Reports" subtitle="Things students flagged. Remove content, ban the person, or dismiss.">
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-        {FILTERS.map((f) => (
-          <Chip key={f.key} label={f.label} selected={filter === f.key} onPress={() => setFilter(f.key)} />
-        ))}
-      </ScrollView>
+      <Row>
+        <FilterDropdown title="Status" value={filter} onChange={setFilter} options={FILTERS} />
+      </Row>
       {!reports ? (
         <Loading />
       ) : reports.length === 0 ? (

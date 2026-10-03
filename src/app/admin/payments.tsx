@@ -3,6 +3,7 @@ import { AdminPage } from '@/components/admin/AdminShell';
 import { DataTable, StatTile, TileGrid } from '@/components/admin/widgets';
 import { METHODS, methodLabel } from '@/components/FakeWallet';
 import { Badge, Button, Chip, Loading, Row, Text } from '@/components/ui';
+import { FilterDropdown } from '@/components/FilterDropdown';
 import { confirm, notify } from '@/lib/actions';
 import { exportCsv } from '@/lib/admin';
 import { dateTime, fullName, peso } from '@/lib/format';
@@ -145,14 +146,22 @@ export default function Payments() {
         <StatTile icon="hourglass-outline" label="Fees still held" value={peso(sum((p) => (p.status === 'held' ? p.fee : 0)))} />
       </TileGrid>
       <Row style={{ flexWrap: 'wrap' }}>
-        {(['all', 'booking', 'order', 'boost', 'plus'] as const).map((t) => (
-          <Chip key={t} label={t === 'all' ? 'All types' : TYPE_LABEL[t]} selected={type === t} onPress={() => setType(t)} />
-        ))}
-      </Row>
-      <Row style={{ flexWrap: 'wrap' }}>
-        {(['all', 'held', 'released', 'refunded', 'paid'] as const).map((s) => (
-          <Chip key={s} label={s === 'all' ? 'All statuses' : s[0].toUpperCase() + s.slice(1)} selected={status === s} onPress={() => setStatus(s)} />
-        ))}
+        <FilterDropdown
+          title="Type"
+          icon="pricetags-outline"
+          value={type}
+          allValue="all"
+          onChange={setType}
+          options={(['all', 'booking', 'order', 'boost', 'plus'] as const).map((t) => ({ value: t, label: t === 'all' ? 'All types' : TYPE_LABEL[t] }))}
+        />
+        <FilterDropdown
+          title="Status"
+          icon="ellipse-outline"
+          value={status}
+          allValue="all"
+          onChange={setStatus}
+          options={(['all', 'held', 'released', 'refunded', 'paid'] as const).map((s) => ({ value: s, label: s === 'all' ? 'All statuses' : s[0].toUpperCase() + s.slice(1) }))}
+        />
       </Row>
       <DataTable
         rows={shown}

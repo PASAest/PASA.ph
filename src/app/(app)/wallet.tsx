@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { METHODS } from '@/components/FakeWallet';
 import { Screen } from '@/components/Screen';
-import { Badge, Button, Card, ChipSelect, DemoBanner, Empty, Field, Loading, Row, Text } from '@/components/ui';
+import { SelectField } from '@/components/SelectField';
+import { Badge, Button, Card, DemoBanner, Empty, Field, Loading, Row, Text } from '@/components/ui';
 import { notify } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
 import { dateTime, fullName, peso } from '@/lib/format';
@@ -89,7 +90,12 @@ export default function Wallet() {
       ) : (
         <Card style={{ gap: space(3) }}>
           <Text variant="title">Withdraw</Text>
-          <ChipSelect label="Send to" options={['gcash', 'maya'] as const} value={method} onChange={setMethod} format={(m) => METHODS[m].label} />
+          <SelectField
+            label="Send to"
+            value={method}
+            onChange={setMethod}
+            options={(['gcash', 'maya'] as const).map((m) => ({ value: m, label: METHODS[m].label, icon: 'wallet-outline' as const }))}
+          />
           <Field label="Amount" placeholder={`Up to ${peso(available)}`} value={form.amount} onChangeText={(v) => setForm((f) => ({ ...f, amount: v.replace(/\D/g, '') }))} keyboardType="number-pad" icon="cash-outline" />
           <Field label="Account name" value={form.name} onChangeText={(v) => setForm((f) => ({ ...f, name: v }))} />
           <Field label="Mobile number" placeholder="09XX XXX XXXX" value={form.number} onChangeText={(v) => setForm((f) => ({ ...f, number: v }))} keyboardType="phone-pad" />

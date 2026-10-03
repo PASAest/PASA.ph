@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
 import { AppBar } from '@/components/AppBar';
 import { CategoryDropdown } from '@/components/CategoryDropdown';
 import { ListingCard } from '@/components/ListingCard';
-import { Button, Chip, Empty, SkeletonList } from '@/components/ui';
+import { Button, Empty, SkeletonList } from '@/components/ui';
+import { FilterDropdown, type FilterOption } from '@/components/FilterDropdown';
 import { useMe } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import type { Listing } from '@/lib/types';
@@ -13,11 +14,11 @@ import { useFocusLoad } from '@/lib/useFocusLoad';
 import { colors, font, radius, space, themed } from '@/theme';
 
 type Filter = 'all' | 'rent' | 'sale' | 'saved';
-const FILTERS: { key: Filter; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'sale', label: 'For Sale' },
-  { key: 'rent', label: 'For Rent' },
-  { key: 'saved', label: 'Saved' },
+const FILTERS: FilterOption<Filter>[] = [
+  { value: 'all', label: 'Sale & rent', icon: 'swap-vertical-outline' },
+  { value: 'sale', label: 'For sale', icon: 'pricetag-outline' },
+  { value: 'rent', label: 'For rent', icon: 'repeat-outline' },
+  { value: 'saved', label: 'Saved', icon: 'heart-outline' },
 ];
 
 // 3.1 · Assets: academic items for sale or rent, with category and type filters
@@ -87,11 +88,7 @@ export default function Assets() {
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <CategoryDropdown value={category} onChange={setCategory} counts={counts} />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} style={{ flex: 1 }}>
-            {FILTERS.map((f) => (
-              <Chip key={f.key} label={f.label} selected={filter === f.key} onPress={() => setFilter(f.key)} />
-            ))}
-          </ScrollView>
+          <FilterDropdown title="Show" value={filter} allValue="all" onChange={setFilter} options={FILTERS} />
         </View>
       </View>
       <FlatList

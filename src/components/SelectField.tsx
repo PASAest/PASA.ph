@@ -21,10 +21,11 @@ type Props<T> = {
   sheetTitle?: string;
   /** Adds a search box to the sheet, for long lists. */
   searchable?: boolean;
+  error?: string;
 };
 
 /** Form dropdown: looks like a text field, opens a bottom sheet of options. */
-export function SelectField<T extends string | number>({ label, value, options, onChange, placeholder = 'Select', icon, display, sheetTitle, searchable }: Props<T>) {
+export function SelectField<T extends string | number>({ label, value, options, onChange, placeholder = 'Select', icon, display, sheetTitle, searchable, error }: Props<T>) {
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -50,7 +51,7 @@ export function SelectField<T extends string | number>({ label, value, options, 
         }}
         accessibilityRole="button"
         accessibilityLabel={`${label ?? sheetTitle ?? 'Select'}: ${text ?? placeholder}`}
-        style={({ pressed }) => [styles.field, open && { borderColor: colors.primary }, pressed && { opacity: 0.85 }]}
+        style={({ pressed }) => [styles.field, open && { borderColor: colors.primary }, !!error && { borderColor: colors.danger }, pressed && { opacity: 0.85 }]}
       >
         {(current?.icon ?? icon) && <Ionicons name={(current?.icon ?? icon)!} size={18} color={text ? colors.primaryDark : colors.muted} />}
         <Text style={[styles.value, !text && { color: colors.muted, fontFamily: font.regular }]} numberOfLines={1}>
@@ -58,6 +59,7 @@ export function SelectField<T extends string | number>({ label, value, options, 
         </Text>
         <Ionicons name="chevron-down" size={18} color={colors.muted} />
       </Pressable>
+      {!!error && <Text style={{ color: colors.danger, fontSize: 12.5 }}>{error}</Text>}
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>

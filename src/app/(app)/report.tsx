@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Screen } from '@/components/Screen';
-import { Button, ChipSelect, Field, Text } from '@/components/ui';
+import { SelectField } from '@/components/SelectField';
+import { Button, Field, Text } from '@/components/ui';
 import { notify } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
@@ -35,7 +36,14 @@ export default function Report() {
   return (
     <Screen back title={`Report ${type}`} footer={<Button title="Send report" variant="primary" onPress={submit} loading={saving} />}>
       <Text variant="muted">Reports are private. The person won't know who reported them.</Text>
-      <ChipSelect label="What's wrong?" options={REASONS[type] ?? REASONS.user} value={reason} onChange={setReason} />
+      <SelectField
+        label="What's wrong?"
+        icon="flag-outline"
+        placeholder="Choose a reason"
+        value={reason}
+        onChange={setReason}
+        options={(REASONS[type] ?? REASONS.user).map((r) => ({ value: r as string, label: r }))}
+      />
       <Field label="Details (optional)" placeholder="Tell us what happened…" value={details} onChangeText={setDetails} multiline />
     </Screen>
   );

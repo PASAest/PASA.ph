@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Pressable } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { Select } from '@/components/Select';
-import { Button, Card, ChipSelect, Field, Text } from '@/components/ui';
+import { SelectField } from '@/components/SelectField';
+import { Button, Card, Field, Text } from '@/components/ui';
 import { PROGRAMS, SCHOOL_EMAIL_DOMAIN, SCHOOLS, YEAR_LEVELS } from '@/config';
 import { notify } from '@/lib/actions';
 import { yearLabel } from '@/lib/format';
@@ -68,8 +69,15 @@ export default function SignUp() {
       {school === 'Other' && <Field label="Your school's name" value={form.otherSchool} onChangeText={set('otherSchool')} />}
       <Select label="Program / Course" options={PROGRAMS} value={program} onChange={setProgram} icon="ribbon-outline" error={errors.program} />
       {program === 'Other' && <Field label="Your program" value={form.otherProgram} onChangeText={set('otherProgram')} />}
-      <ChipSelect label="Year level" options={YEAR_LEVELS} value={year} onChange={setYear} format={yearLabel} />
-      {errors.year && <Text style={{ color: colors.danger, fontSize: 12.5, marginTop: -8 }}>{errors.year}</Text>}
+      <SelectField
+        label="Year level"
+        icon="layers-outline"
+        placeholder="Choose your year"
+        value={year}
+        onChange={setYear}
+        error={errors.year}
+        options={YEAR_LEVELS.map((y) => ({ value: y, label: yearLabel(y) }))}
+      />
       <Field
         label="Email address"
         placeholder="you@email.com"

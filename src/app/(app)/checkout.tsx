@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { FakeWallet, METHODS, type PayMethod } from '@/components/FakeWallet';
 import { Screen } from '@/components/Screen';
-import { Button, Card, ChipSelect, DemoBanner, Divider, Loading, Row, Text } from '@/components/ui';
+import { SelectField } from '@/components/SelectField';
+import { Button, Card, DemoBanner, Divider, Loading, Row, Text } from '@/components/ui';
 import { notify } from '@/lib/actions';
 import { requireVerified, useMe } from '@/lib/auth';
 import { dateTime, daysFromNow, extendFrom, fullName, isPlus, peso, referenceNo } from '@/lib/format';
@@ -229,7 +230,13 @@ export default function Checkout() {
         <Text variant="muted">{summary.subtitle}</Text>
       </Card>
       {params.type === 'order' && listing?.mode === 'rent' && (
-        <ChipSelect label="How many weeks?" options={WEEKS} value={weeks} onChange={setWeeks} format={(w) => `${w} week${w > 1 ? 's' : ''}`} />
+        <SelectField
+          label="How many weeks?"
+          icon="calendar-outline"
+          value={weeks}
+          onChange={setWeeks}
+          options={WEEKS.map((w) => ({ value: w, label: `${w} week${w > 1 ? 's' : ''}` }))}
+        />
       )}
       <Card style={{ gap: 8 }}>
         {summary.lines.map((l) => (
