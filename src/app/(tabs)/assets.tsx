@@ -3,9 +3,9 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { AppBar } from '@/components/AppBar';
+import { CategoryDropdown } from '@/components/CategoryDropdown';
 import { ListingCard } from '@/components/ListingCard';
-import { Button, Chip, Empty, Loading } from '@/components/ui';
-import { CATEGORIES } from '@/config';
+import { Button, Chip, Empty, SkeletonList } from '@/components/ui';
 import { useMe } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import type { Listing } from '@/lib/types';
@@ -53,12 +53,15 @@ export default function Assets() {
   };
 
   const q = search.trim().toLowerCase();
-  const shown = listings.filter((l) => {
-    if (category && l.category !== category) return false;
+  // Everything except the category filter, so the dropdown can show how many items each category has.
+  const matching = listings.filter((l) => {
     if (filter === 'rent' || filter === 'sale') { if (l.mode !== filter) return false; }
     if (filter === 'saved' && !favorites.has(l.id)) return false;
     return !q || `${l.title} ${l.book_author} ${l.description}`.toLowerCase().includes(q);
   });
+  const counts: Record<string, number> = {};
+  for (const l of matching) counts[l.category] = (counts[l.category] ?? 0) + 1;
+  const shown = category ? matching.filter((l) => l.category === category) : matching;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -82,17 +85,14 @@ export default function Assets() {
           />
           {!!search && <Ionicons name="close-circle" size={18} color={colors.muted} onPress={() => setSearch('')} />}
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-          <Chip label="All categories" selected={!category} onPress={() => setCategory(null)} />
-          {CATEGORIES.map((c) => (
-            <Chip key={c.key} label={c.label} icon={`${c.icon}-outline`} selected={category === c.key} onPress={() => setCategory(category === c.key ? null : c.key)} />
-          ))}
-        </ScrollView>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-          {FILTERS.map((f) => (
-            <Chip key={f.key} label={f.label} selected={filter === f.key} onPress={() => setFilter(f.key)} />
-          ))}
-        </ScrollView>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <CategoryDropdown value={category} onChange={setCategory} counts={counts} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} style={{ flex: 1 }}>
+            {FILTERS.map((f) => (
+              <Chip key={f.key} label={f.label} selected={filter === f.key} onPress={() => setFilter(f.key)} />
+            ))}
+          </ScrollView>
+        </View>
       </View>
       <FlatList
         data={shown}
@@ -110,7 +110,7 @@ export default function Assets() {
               action={<Button title="List an item" small onPress={() => router.push('/listing/new')} />}
             />
           ) : (
-            <Loading />
+            <SkeletonList count={2} media />
           )
         }
         renderItem={({ item, index }) => (

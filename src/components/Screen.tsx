@@ -27,7 +27,7 @@ export function Screen({ children, title, back, right, scroll = true, refreshing
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Stack.Screen options={{ headerShown: false }} />
       {(title || back) && (
-        <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
           {back ? (
             <Pressable
               onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
@@ -67,7 +67,7 @@ const styles = themed(() => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: space(3),
-    paddingBottom: space(2),
+    paddingBottom: space(3),
     backgroundColor: colors.bg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,

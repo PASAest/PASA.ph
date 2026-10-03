@@ -14,12 +14,12 @@ export function AppBar({ action }: { action?: ReactNode }) {
   const insets = useSafeAreaInsets();
   const unread = useUnreadCount();
   return (
-    <View style={[styles.bar, { paddingTop: insets.top + 6 }]}>
+    <View style={[styles.bar, { paddingTop: insets.top + 18 }]}>
       <View style={styles.logo}>
         <Logo size={34} />
         <Text style={styles.word}>PASA</Text>
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 22 }}>
         {action}
         <Pressable onPress={() => router.push('/notifications')} hitSlop={10} accessibilityLabel="Notifications">
           <Ionicons name="notifications-outline" size={25} color={colors.text} />
@@ -67,7 +67,7 @@ const styles = themed(() => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: space(4),
-    paddingBottom: space(2),
+    paddingBottom: space(4),
     backgroundColor: colors.bg,
   },
   logo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
