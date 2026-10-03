@@ -2,7 +2,8 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { POST_TYPES } from '@/components/PostCard';
 import { Screen } from '@/components/Screen';
-import { Button, ChipSelect, Field, Text } from '@/components/ui';
+import { SelectField } from '@/components/SelectField';
+import { Button, Field, Text } from '@/components/ui';
 import { SUBJECTS } from '@/config';
 import { notify } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
@@ -15,6 +16,12 @@ const PROMPTS: Record<PostType, string> = {
   need_tutor: 'e.g. Need help with Cost Accounting (job order costing) before Friday\'s quiz. Free Thu 3–5pm.',
   offer_tutoring: 'e.g. Dean\'s lister, can teach FAR and Cost Accounting. Available MWF afternoons at the library.',
   general: 'Share an announcement, tip, or question with your campus…',
+};
+
+const HINTS: Record<PostType, string> = {
+  need_tutor: 'Ask classmates to help you with a subject',
+  offer_tutoring: 'Let students know you can teach a subject',
+  general: 'Announcements, tips and questions',
 };
 
 // 3a · Create post
@@ -47,8 +54,23 @@ export default function NewPost() {
 
   return (
     <Screen back title="Create post" footer={<Button title="Post" onPress={submit} loading={saving} />}>
-      <ChipSelect label="What kind of post?" options={TYPES} value={type} onChange={setType} format={(t) => POST_TYPES[t].label} />
-      {tutoring && <ChipSelect label="Subject" options={SUBJECTS} value={subject} onChange={setSubject} />}
+      <SelectField
+        label="What kind of post?"
+        value={type}
+        onChange={setType}
+        options={TYPES.map((t) => ({ value: t, label: POST_TYPES[t].label, icon: POST_TYPES[t].icon, hint: HINTS[t] }))}
+      />
+      {tutoring && (
+        <SelectField
+          label="Subject"
+          icon="book-outline"
+          placeholder="Choose a subject"
+          searchable
+          value={subject}
+          onChange={setSubject}
+          options={SUBJECTS.map((s) => ({ value: s, label: s }))}
+        />
+      )}
       {tutoring && (
         <Field
           label={type === 'need_tutor' ? 'Budget per hour (optional)' : 'Your rate per hour (optional)'}

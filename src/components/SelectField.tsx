@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState, type ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, TextInput, View, type TextStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tap } from '@/lib/haptics';
 import { colors, elevation, font, radius, space, themed } from '@/theme';
@@ -19,12 +19,17 @@ type Props<T> = {
   /** Overrides the text shown in the field (e.g. a custom value that isn't one of the options). */
   display?: string;
   sheetTitle?: string;
+  /** Adds a search box to the sheet, for long lists. */
+  searchable?: boolean;
 };
 
 /** Form dropdown: looks like a text field, opens a bottom sheet of options. */
-export function SelectField<T extends string | number>({ label, value, options, onChange, placeholder = 'Select', icon, display, sheetTitle }: Props<T>) {
+export function SelectField<T extends string | number>({ label, value, options, onChange, placeholder = 'Select', icon, display, sheetTitle, searchable }: Props<T>) {
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
+  const shown = q ? options.filter((o) => o.label.toLowerCase().includes(q)) : options;
   const current = options.find((o) => o.value === value);
   const text = display ?? current?.label;
 
@@ -32,6 +37,7 @@ export function SelectField<T extends string | number>({ label, value, options, 
     tap();
     onChange(v);
     setOpen(false);
+    setQuery('');
   };
 
   return (
@@ -60,8 +66,26 @@ export function SelectField<T extends string | number>({ label, value, options, 
             <Text variant="title" style={styles.header}>
               {sheetTitle ?? label ?? 'Select'}
             </Text>
-            <ScrollView>
-              {options.map((o) => (
+            {searchable && (
+              <View style={styles.search}>
+                <Ionicons name="search" size={17} color={colors.muted} />
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search"
+                  placeholderTextColor={colors.muted}
+                  autoCorrect={false}
+                  style={styles.searchInput}
+                />
+              </View>
+            )}
+            <ScrollView keyboardShouldPersistTaps="handled">
+              {searchable && !shown.length && (
+                <Text variant="muted" style={{ paddingHorizontal: space(5), paddingVertical: space(4) }}>
+                  No matches for “{query.trim()}”
+                </Text>
+              )}
+              {shown.map((o) => (
                 <SheetOption key={String(o.value)} option={o} selected={o.value === value} onPress={() => choose(o.value)} />
               ))}
             </ScrollView>
@@ -125,6 +149,17 @@ const styles = themed(() =>
       ...elevation(),
     },
     handle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, marginTop: 10 },
+    search: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginHorizontal: space(5),
+      marginBottom: space(2),
+      paddingHorizontal: 12,
+      borderRadius: radius.md,
+      backgroundColor: colors.bg,
+    },
+    searchInput: { flex: 1, minHeight: 42, fontFamily: font.regular, fontSize: 15, color: colors.text, outlineStyle: 'none' } as unknown as TextStyle,
     header: { paddingHorizontal: space(5), paddingTop: space(3), paddingBottom: space(2) },
     option: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: space(5), paddingVertical: 12 },
     iconTile: { width: 38, height: 38, borderRadius: 12, backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center' },
