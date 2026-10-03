@@ -15,7 +15,7 @@ import { PhoneFrame } from '@/components/PhoneFrame';
 import { SetupNeeded } from '@/components/SetupNeeded';
 import { AuthProvider } from '@/lib/auth';
 import { SettingsProvider } from '@/lib/settings';
-import { ThemeProvider } from '@/lib/themeMode';
+import { ThemeProvider, ThemeRemount } from '@/lib/themeMode';
 import { ToastHost } from '@/lib/toast';
 import { isConfigured } from '@/lib/supabase';
 import { colors } from '@/theme';
@@ -40,10 +40,12 @@ export default function RootLayout() {
             {isConfigured ? (
               <SettingsProvider>
                 <AuthProvider>
-                  <PhoneFrame>
-                    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: 'slide_from_right' }} />
-                    <ToastHost />
-                  </PhoneFrame>
+                  <ThemeRemount>
+                    <PhoneFrame>
+                      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: 'slide_from_right' }} />
+                      <ToastHost />
+                    </PhoneFrame>
+                  </ThemeRemount>
                 </AuthProvider>
               </SettingsProvider>
             ) : (

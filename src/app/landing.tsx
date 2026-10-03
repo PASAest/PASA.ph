@@ -138,10 +138,12 @@ export default function Landing() {
     saveMode(next); // remembered for next time and for the app
   };
   // Leaving the landing page: bring the app's theme in line with what the visitor picked here.
-  // Navigate first, then switch the app's theme once the new screen is showing (it rebuilds at the current URL).
+  // Apply the visitor's choice to the app first (the screens rebuild here, where it already looks right),
+  // then navigate once the rebuild has settled.
   const open = (href: '/welcome' | '/log-in' | '/terms' | '/admin') => {
-    router.push(href);
-    if (theme.scheme !== mode) setTimeout(() => theme.setMode(mode, { returnHere: false }), 250);
+    if (theme.scheme === mode) return router.navigate(href);
+    theme.setMode(mode);
+    setTimeout(() => router.navigate(href), 200);
   };
   const start = () => open('/welcome');
   const setAnchor = (key: string, e: { nativeEvent: { layout: { y: number } } }) => {

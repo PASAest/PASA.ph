@@ -7,8 +7,9 @@ type ThemeState = { mode: ThemeMode; scheme: Scheme; setMode: (m: ThemeMode, opt
 const ThemeContext = createContext<ThemeState>({ mode: 'system', scheme: 'light', setMode: () => {} });
 
 /**
- * Light / dark / follow-the-phone. Switching swaps the palette and remounts the app so every
- * style is rebuilt, then returns to the screen you were on.
+ * Light / dark / follow-the-phone. Switching swaps the palette; <ThemeRemount> then rebuilds the screens so every
+ * style updates, and we return to the screen you were on. Providers above <ThemeRemount> (auth, settings) stay
+ * mounted, so the signed-in session is never lost mid-switch.
  */
 export function ThemeProvider({ children }: { children: (scheme: Scheme) => ReactNode }) {
   const system = useColorScheme();
@@ -31,16 +32,18 @@ export function ThemeProvider({ children }: { children: (scheme: Scheme) => Reac
 
   return (
     <ThemeContext.Provider value={{ mode, scheme: effective, setMode }}>
-      <ThemeKey scheme={effective}>{children(effective)}</ThemeKey>
+      {children(effective)}
     </ThemeContext.Provider>
   );
 }
 
-function ThemeKey({ scheme, children }: { scheme: Scheme; children: ReactNode }) {
-  return <ThemeRemount key={scheme}>{children}</ThemeRemount>;
+/** Wrap the screens (not the providers) in this: it remounts them when the theme changes. */
+export function ThemeRemount({ children }: { children: ReactNode }) {
+  const { scheme } = useContext(ThemeContext);
+  return <Remount key={scheme}>{children}</Remount>;
 }
 
-function ThemeRemount({ children }: { children: ReactNode }) {
+function Remount({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 

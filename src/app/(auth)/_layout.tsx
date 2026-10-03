@@ -1,7 +1,7 @@
 import { Redirect, Stack, usePathname } from 'expo-router';
 import { useAuth } from '@/lib/auth';
 
-// Entering this group from outside (e.g. the landing page) should start at Welcome, not the first file alphabetically.
+// Entering this group from outside (e.g. the landing page) starts at Welcome.
 export const unstable_settings = { initialRouteName: 'welcome' };
 
 export default function AuthLayout() {
