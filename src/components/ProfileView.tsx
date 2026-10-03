@@ -61,9 +61,16 @@ export function useProfileData(userId: string) {
 export function ProfileView({ data, reload }: { data: Data | null; reload: () => Promise<void> }) {
   const { me } = useMe();
   const [menu, setMenu] = useState(false);
+  // Shown right away on tap, until the reload brings the saved state back.
+  const [shownLink, setShownLink] = useState<Data['link'] | null>(null);
   const statuses = useStatuses([data?.profile.id]);
   if (!data) return <Loading />;
-  const { profile: p, ratings, reviews, listings, connections, link } = data;
+  const { profile: p, ratings, reviews, listings, connections } = data;
+  const link = shownLink ?? data.link;
+  const refresh = async () => {
+    await reload();
+    setShownLink(null);
+  };
   const isMe = p.id === me.id;
   const tutorRating = ratings.find((r) => r.role === 'tutor');
   const sellerRating = ratings.find((r) => r.role === 'seller');
@@ -74,26 +81,36 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
 
   const connect = async () => {
     if (link === 'none') {
+      setShownLink('sent');
       const { error } = await supabase.from('connections').insert({ follower_id: me.id, following_id: p.id });
-      if (error) return notify('Could not send request', error.message);
+      if (error) {
+        setShownLink(null);
+        return notify('Could not send request', error.message);
+      }
       toast(`Connection request sent to ${p.first_name}`);
     } else if (link === 'sent') {
       if (!(await confirm('Withdraw request?', `${p.first_name} won't see your connection request anymore.`, 'Withdraw'))) return;
+      setShownLink('none');
       await removeLink();
     } else if (link === 'connected') {
       if (!(await confirm(`Remove ${p.first_name}?`, 'You can send a new request later.', 'Remove'))) return;
+      setShownLink('none');
       await removeLink();
     }
-    reload();
+    refresh();
   };
 
   const respond = async (accept: boolean) => {
+    setShownLink(accept ? 'connected' : 'none');
     const { error } = accept
       ? await supabase.from('connections').update({ status: 'accepted' }).eq('follower_id', p.id).eq('following_id', me.id)
       : await removeLink();
-    if (error) return notify('Something went wrong', error.message);
+    if (error) {
+      setShownLink(null);
+      return notify('Something went wrong', error.message);
+    }
     if (accept) toast(`You're now connected with ${p.first_name}`);
-    reload();
+    refresh();
   };
 
   const block = async () => {
