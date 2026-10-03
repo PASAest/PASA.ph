@@ -299,6 +299,13 @@ create table if not exists public.app_settings (
 );
 insert into public.app_settings (id) values (1) on conflict do nothing;
 
+-- Connections are requests the other student accepts (like LinkedIn). follower_id sent the request,
+-- following_id received it. Connections made before this change stay accepted.
+alter table public.connections add column if not exists status text not null default 'accepted';
+alter table public.connections alter column status set default 'pending';
+alter table public.connections drop constraint if exists connections_status_check;
+alter table public.connections add constraint connections_status_check check (status in ('pending', 'accepted'));
+
 -- ─────────────────────────────────────────────────────────────
 -- Admins and bans (managed from the /admin web panel)
 -- ─────────────────────────────────────────────────────────────
@@ -575,11 +582,28 @@ create trigger comments_after_insert after insert on public.comments
 create or replace function public.on_connection()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  perform notify(new.following_id, display_name(new.follower_id) || ' connected with you', '', '/user/' || new.follower_id);
+  if tg_op = 'INSERT' and new.status = 'pending' then
+    perform notify(new.following_id, display_name(new.follower_id) || ' wants to connect with you',
+      'Open their profile to accept or ignore.', '/user/' || new.follower_id);
+  elsif tg_op = 'UPDATE' and new.status = 'accepted' and old.status = 'pending' then
+    perform notify(new.follower_id, display_name(new.following_id) || ' accepted your connection request', '', '/user/' || new.following_id);
+  end if;
   return new;
 end $$;
+-- Accepting only changes the status, never who the connection is between.
+create or replace function public.guard_connection()
+returns trigger language plpgsql as $$
+begin
+  if new.follower_id <> old.follower_id or new.following_id <> old.following_id then
+    raise exception 'A connection can only be accepted, not changed';
+  end if;
+  return new;
+end $$;
+drop trigger if exists connections_guard on public.connections;
+create trigger connections_guard before update on public.connections
+  for each row execute function public.guard_connection();
 drop trigger if exists connections_after_insert on public.connections;
-create trigger connections_after_insert after insert on public.connections
+create trigger connections_after_insert after insert or update on public.connections
   for each row execute function public.on_connection();
 
 -- ─────────────────────────────────────────────────────────────
@@ -618,7 +642,8 @@ create policy "read" on public.comments for select to authenticated using (true)
 create policy "read" on public.listings for select to authenticated
   using (status not in ('pending_review', 'rejected') or seller_id = auth.uid() or is_admin());
 create policy "read" on public.reviews for select to authenticated using (true);
-create policy "read" on public.connections for select to authenticated using (true);
+-- Accepted connections are public; pending requests only to the two students involved.
+create policy "read" on public.connections for select to authenticated using (status = 'accepted' or auth.uid() in (follower_id, following_id));
 
 -- Own rows
 create policy "update own" on public.profiles for update to authenticated using (id = auth.uid());
@@ -626,8 +651,12 @@ create policy "write own" on public.posts for all to authenticated using (author
 create policy "write own" on public.comments for all to authenticated using (author_id = auth.uid()) with check (author_id = auth.uid() and not is_banned());
 create policy "write own" on public.listings for all to authenticated using (seller_id = auth.uid()) with check (seller_id = auth.uid() and not is_banned());
 create policy "own" on public.favorites for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
-create policy "own" on public.connections for insert to authenticated with check (follower_id = auth.uid());
-create policy "delete own" on public.connections for delete to authenticated using (follower_id = auth.uid());
+-- Send a request (always pending), accept one sent to you, and either side can cancel, ignore or remove.
+create policy "own" on public.connections for insert to authenticated
+  with check (follower_id = auth.uid() and following_id <> auth.uid() and status = 'pending' and not is_banned());
+create policy "accept" on public.connections for update to authenticated
+  using (following_id = auth.uid()) with check (following_id = auth.uid() and status = 'accepted');
+create policy "delete own" on public.connections for delete to authenticated using (auth.uid() in (follower_id, following_id));
 create policy "either side reads" on public.blocks for select to authenticated using (auth.uid() in (blocker_id, blocked_id));
 create policy "own" on public.blocks for insert to authenticated with check (blocker_id = auth.uid());
 create policy "delete own" on public.blocks for delete to authenticated using (blocker_id = auth.uid());

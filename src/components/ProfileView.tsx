@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { confirm, notify, openChat } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
+import { toast } from '@/lib/toast';
 import { fullName, isPlus, peso, shortDate, yearLabel } from '@/lib/format';
 import { PRESENCE_LABEL, useStatuses } from '@/lib/presence';
 import { supabase } from '@/lib/supabase';
@@ -21,7 +22,8 @@ type Data = {
   reviews: Review[];
   listings: Listing[];
   connections: number;
-  connected: boolean;
+  /** Between me and this student: none, a request I sent, a request they sent, or connected. */
+  link: 'none' | 'sent' | 'received' | 'connected';
 };
 
 // 3.4 · Profile (yours or another student's)
@@ -34,8 +36,13 @@ export function useProfileData(userId: string) {
       supabase.from('profile_ratings').select('*').eq('user_id', userId),
       supabase.from('reviews').select('*, reviewer:profiles!reviews_reviewer_id_fkey(*)').eq('reviewee_id', userId).order('created_at', { ascending: false }).limit(5),
       supabase.from('listings').select('*').eq('seller_id', userId).order('created_at', { ascending: false }),
-      supabase.from('connections').select('follower_id', { count: 'exact', head: true }).eq('following_id', userId),
-      supabase.from('connections').select('follower_id').eq('follower_id', me.id).eq('following_id', userId).maybeSingle(),
+      supabase.from('connections').select('follower_id', { count: 'exact', head: true }).eq('status', 'accepted').or(`follower_id.eq.${userId},following_id.eq.${userId}`),
+      supabase
+        .from('connections')
+        .select('follower_id, status')
+        .or(`and(follower_id.eq.${me.id},following_id.eq.${userId}),and(follower_id.eq.${userId},following_id.eq.${me.id})`)
+        .limit(1)
+        .maybeSingle(),
     ]);
     if (!p.data) return;
     setData({
@@ -44,7 +51,7 @@ export function useProfileData(userId: string) {
       reviews: (rv.data as Review[]) ?? [],
       listings: (l.data as Listing[]) ?? [],
       connections: c.count ?? 0,
-      connected: !!mine.data,
+      link: !mine.data ? 'none' : mine.data.status === 'accepted' ? 'connected' : mine.data.follower_id === me.id ? 'sent' : 'received',
     });
   };
   const state = useFocusLoad(load, [userId]);
@@ -56,14 +63,36 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
   const [menu, setMenu] = useState(false);
   const statuses = useStatuses([data?.profile.id]);
   if (!data) return <Loading />;
-  const { profile: p, ratings, reviews, listings, connections, connected } = data;
+  const { profile: p, ratings, reviews, listings, connections, link } = data;
   const isMe = p.id === me.id;
   const tutorRating = ratings.find((r) => r.role === 'tutor');
   const sellerRating = ratings.find((r) => r.role === 'seller');
 
-  const toggleConnect = async () => {
-    if (connected) await supabase.from('connections').delete().eq('follower_id', me.id).eq('following_id', p.id);
-    else await supabase.from('connections').insert({ follower_id: me.id, following_id: p.id });
+  // Removes the connection or request between us, whichever direction it was sent.
+  const removeLink = () =>
+    supabase.from('connections').delete().or(`and(follower_id.eq.${me.id},following_id.eq.${p.id}),and(follower_id.eq.${p.id},following_id.eq.${me.id})`);
+
+  const connect = async () => {
+    if (link === 'none') {
+      const { error } = await supabase.from('connections').insert({ follower_id: me.id, following_id: p.id });
+      if (error) return notify('Could not send request', error.message);
+      toast(`Connection request sent to ${p.first_name}`);
+    } else if (link === 'sent') {
+      if (!(await confirm('Withdraw request?', `${p.first_name} won't see your connection request anymore.`, 'Withdraw'))) return;
+      await removeLink();
+    } else if (link === 'connected') {
+      if (!(await confirm(`Remove ${p.first_name}?`, 'You can send a new request later.', 'Remove'))) return;
+      await removeLink();
+    }
+    reload();
+  };
+
+  const respond = async (accept: boolean) => {
+    const { error } = accept
+      ? await supabase.from('connections').update({ status: 'accepted' }).eq('follower_id', p.id).eq('following_id', me.id)
+      : await removeLink();
+    if (error) return notify('Something went wrong', error.message);
+    if (accept) toast(`You're now connected with ${p.first_name}`);
     reload();
   };
 
@@ -120,18 +149,33 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
             <Button title="" icon="settings-outline" variant="outline" small onPress={() => router.push('/settings')} />
           </Row>
         ) : (
-          <Row>
-            <Button
-              title={connected ? 'Connected' : 'Connect'}
-              icon={connected ? 'checkmark' : 'person-add'}
-              variant={connected ? 'soft' : 'primary'}
-              small
-              style={{ flex: 1 }}
-              onPress={toggleConnect}
-            />
-            <Button title="Message" icon="paper-plane-outline" variant="outline" small style={{ flex: 1 }} onPress={() => openChat(p.id)} />
-            <Button title="" icon="ellipsis-horizontal" variant="outline" small onPress={() => setMenu(true)} />
-          </Row>
+          <View style={{ gap: space(2) }}>
+            {link === 'received' && (
+              <View style={styles.request}>
+                <Text variant="label" style={{ textAlign: 'center' }}>
+                  {p.first_name} wants to connect with you
+                </Text>
+                <Row>
+                  <Button title="Accept" icon="checkmark" small style={{ flex: 1 }} onPress={() => respond(true)} />
+                  <Button title="Ignore" variant="outline" small style={{ flex: 1 }} onPress={() => respond(false)} />
+                </Row>
+              </View>
+            )}
+            <Row>
+              {link !== 'received' && (
+                <Button
+                  title={link === 'connected' ? 'Connected' : link === 'sent' ? 'Pending' : 'Connect'}
+                  icon={link === 'connected' ? 'checkmark' : link === 'sent' ? 'time-outline' : 'person-add'}
+                  variant={link === 'none' ? 'primary' : 'soft'}
+                  small
+                  style={{ flex: 1 }}
+                  onPress={connect}
+                />
+              )}
+              <Button title="Message" icon="paper-plane-outline" variant="outline" small style={{ flex: 1 }} onPress={() => openChat(p.id)} />
+              <Button title="" icon="ellipsis-horizontal" variant="outline" small onPress={() => setMenu(true)} />
+            </Row>
+          </View>
         )}
         <Text variant="muted" style={{ textAlign: 'center', fontSize: 12 }}>
           Joined {shortDate(p.created_at)}
@@ -267,6 +311,7 @@ function RatingBlock({ label, rating }: { label: string; rating: Rating }) {
 }
 
 const styles = themed(() => StyleSheet.create({
+  request: { gap: space(2), padding: space(3), borderRadius: 12, backgroundColor: colors.brandSoft },
   review: { gap: 4, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: space(3) },
   stats: { flexDirection: 'row', paddingVertical: space(3), borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: space(3) },
