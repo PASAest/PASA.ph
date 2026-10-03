@@ -10,6 +10,7 @@ import { fullName, peso } from '@/lib/format';
 import { checkText } from '@/lib/moderation';
 import { serviceFee, useSettings } from '@/lib/settings';
 import { supabase } from '@/lib/supabase';
+import { toast } from '@/lib/toast';
 import type { Profile } from '@/lib/types';
 import { colors, font } from '@/theme';
 
@@ -91,7 +92,7 @@ export default function BookTutor() {
     });
     setSaving(false);
     if (error) return notify('Could not book', error.message);
-    notify('Request sent!', `${tutor.first_name} will accept or decline. You'll pay once it's accepted.`);
+    toast(`Request sent to ${tutor.first_name}. You'll pay once it's accepted.`);
     router.replace('/activity');
   };
 

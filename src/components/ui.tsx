@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState, type ComponentProps, type ReactNode } from 'react';
+import { useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Image,
+  Platform,
   Pressable,
   StyleSheet,
   Text as RNText,
@@ -13,7 +15,8 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
-import { colors, font, radius, space, themed } from '@/theme';
+import { tap } from '@/lib/haptics';
+import { colors, elevation, font, radius, space, themed } from '@/theme';
 import type { Profile } from '@/lib/types';
 
 export type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -24,15 +27,16 @@ export function Text({ variant = 'body', style, ...props }: TextProps & { varian
   return <RNText {...props} style={[styles.body, textVariants[variant], style]} />;
 }
 
-const textVariants: Record<Variant, TextStyle> = {
+// Rebuilt on theme change (muted text color differs in dark mode).
+const textVariants = themed<Record<Variant, TextStyle>>(() => ({
   body: {},
   title: { fontFamily: font.bold, fontSize: 17 },
-  h1: { fontFamily: font.black, fontSize: 28, lineHeight: 34 },
-  h2: { fontFamily: font.black, fontSize: 21, lineHeight: 27 },
+  h1: { fontFamily: font.display, fontSize: 30, lineHeight: 34, letterSpacing: -0.6 },
+  h2: { fontFamily: font.display, fontSize: 22, lineHeight: 27, letterSpacing: -0.3 },
   label: { fontFamily: font.bold, fontSize: 14 },
   small: { fontSize: 12.5 },
   muted: { color: colors.muted, fontSize: 13.5 },
-};
+}));
 
 type ButtonProps = {
   title: string;
@@ -49,7 +53,10 @@ export function Button({ title, onPress, variant = 'primary', icon, loading, dis
   const v = buttonVariants()[variant];
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        tap();
+        onPress?.();
+      }}
       disabled={disabled || loading}
       accessibilityRole="button"
       style={({ pressed }) => [
@@ -57,7 +64,7 @@ export function Button({ title, onPress, variant = 'primary', icon, loading, dis
         small && styles.buttonSmall,
         { backgroundColor: v.bg, borderColor: v.border },
         (disabled || loading) && { opacity: 0.5 },
-        pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] },
+        pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] },
         style,
       ]}
     >
@@ -157,7 +164,7 @@ export function ChipSelect<T extends string | number>({
 export function Card({ children, style, onPress }: { children: ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void }) {
   if (onPress) {
     return (
-      <Pressable onPress={onPress} style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }, style]}>
+      <Pressable onPress={onPress} style={({ pressed }) => [styles.card, pressed && { transform: [{ scale: 0.985 }], opacity: 0.95 }, style]}>
         {children}
       </Pressable>
     );
@@ -229,6 +236,44 @@ export function Empty({ icon, title, text, action }: { icon: IconName; title: st
   );
 }
 
+/** Pulsing placeholder shape shown while content loads. */
+export function Skeleton({ width = '100%', height = 14, radius: r = 8, style }: { width?: number | `${number}%`; height?: number; radius?: number; style?: StyleProp<ViewStyle> }) {
+  const [v] = useState(() => new Animated.Value(0.5));
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(v, { toValue: 1, duration: 650, useNativeDriver: Platform.OS !== 'web' }),
+        Animated.timing(v, { toValue: 0.5, duration: 650, useNativeDriver: Platform.OS !== 'web' }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [v]);
+  return <Animated.View style={[{ width, height, borderRadius: r, backgroundColor: colors.border, opacity: v }, style]} />;
+}
+
+/** A card-shaped loading placeholder (avatar + lines), repeated `count` times. */
+export function SkeletonList({ count = 3, media = false }: { count?: number; media?: boolean }) {
+  return (
+    <View style={{ gap: space(3) }}>
+      {Array.from({ length: count }, (_, i) => (
+        <View key={i} style={[styles.card, { gap: 12 }]}>
+          {media && <Skeleton height={140} radius={12} />}
+          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+            <Skeleton width={40} height={40} radius={20} />
+            <View style={{ flex: 1, gap: 6 }}>
+              <Skeleton width="55%" />
+              <Skeleton width="35%" height={11} />
+            </View>
+          </View>
+          <Skeleton width="90%" />
+          <Skeleton width="70%" />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export function Loading() {
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 }}>
@@ -295,8 +340,9 @@ const styles = themed(() => StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: space(4),
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
+    ...elevation(),
   },
   avatar: { backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center' },
   badge: {

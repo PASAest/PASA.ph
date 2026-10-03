@@ -8,6 +8,7 @@ import { Badge, Button, Card, Row, Text } from '@/components/ui';
 import { notify } from '@/lib/actions';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
+import { toast } from '@/lib/toast';
 import { uploadDocument, type Picked } from '@/lib/upload';
 import { colors } from '@/theme';
 
@@ -38,7 +39,7 @@ export default function Verify() {
       const { error } = await supabase.from('profiles').update({ id_doc_path, cor_doc_path, verification_status: 'pending' }).eq('id', session.user.id);
       if (error) throw error;
       await refreshProfile();
-      notify('Submitted!', 'The PASA team will review your documents, usually within a day. You can browse in the meantime.');
+      toast('Documents sent. We’ll review them within a day.');
       done();
     } catch (e) {
       notify('Upload failed', (e as Error).message);

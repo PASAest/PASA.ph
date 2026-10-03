@@ -5,6 +5,7 @@ import { Button, ChipSelect, Field, Text } from '@/components/ui';
 import { notify } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
+import { toast } from '@/lib/toast';
 
 const REASONS = {
   user: ['Harassment or flirting', 'Scam or fraud', 'No-show', 'Fake account', 'Offensive language', 'Other'],
@@ -27,7 +28,7 @@ export default function Report() {
     const { error } = await supabase.from('reports').insert({ reporter_id: me.id, target_type: type, target_id: id, reason, details: details.trim() });
     setSaving(false);
     if (error) return notify('Could not send report', error.message);
-    notify('Thanks for reporting', 'The PASA team will review this within 24 hours.');
+    toast('Report sent. The PASA team will review it.');
     router.back();
   };
 

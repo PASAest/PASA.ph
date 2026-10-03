@@ -8,6 +8,7 @@ import { notify } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
 import { dateTime, fullName, peso } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
+import { toast } from '@/lib/toast';
 import type { Payout, Profile } from '@/lib/types';
 import { useFocusLoad } from '@/lib/useFocusLoad';
 import { colors, font, space } from '@/theme';
@@ -69,7 +70,7 @@ export default function Wallet() {
     if (error) return notify('Could not request withdrawal', error.message);
     setWithdrawing(false);
     setForm((f) => ({ ...f, amount: '' }));
-    notify('Withdrawal requested', `The PASA team will send ${peso(amount)} to your ${METHODS[method].label}.`);
+    toast(`Withdrawal of ${peso(amount)} requested`);
     load();
   };
 

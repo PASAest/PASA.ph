@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Image, Pressable, View } from 'react-native';
+import { View } from 'react-native';
+import { PhotoPicker } from '@/components/PhotoPicker';
 import { Screen } from '@/components/Screen';
 import { Button, Card, ChipSelect, Field, Row, Text } from '@/components/ui';
 import { CATEGORIES, categoryOf, DELIVERY_NOTE, type CategoryKey } from '@/config';
@@ -10,8 +11,9 @@ import { requireVerified, useMe } from '@/lib/auth';
 import { checkListing } from '@/lib/moderation';
 import { supabase } from '@/lib/supabase';
 import type { Listing } from '@/lib/types';
-import { pickMedia, uploadImage, type Picked } from '@/lib/upload';
-import { colors, radius } from '@/theme';
+import { toast } from '@/lib/toast';
+import { uploadImage, type Picked } from '@/lib/upload';
+import { colors } from '@/theme';
 
 const MODES = ['sale', 'rent'] as const;
 const CONDITIONS = ['Brand new', 'Like new', 'Good', 'Fair', 'Well-loved'];
@@ -27,6 +29,7 @@ export default function ListingForm() {
   const [photo, setPhoto] = useState<Picked | null>(null);
   const [existingPhoto, setExistingPhoto] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
   const digits = (k: 'price' | 'deposit') => (v: string) => set(k)(v.replace(/\D/g, ''));
 
@@ -51,7 +54,12 @@ export default function ListingForm() {
     if (!check.ok) return notify('This item can’t be listed', check.reason);
     setSaving(true);
     try {
-      const photo_url = photo ? await uploadImage(photo.uri, me.id, photo.mimeType) : existingPhoto;
+      let photo_url = existingPhoto;
+      if (photo) {
+        setUploading(true);
+        photo_url = await uploadImage(photo, me.id);
+        setUploading(false);
+      }
       const row = {
         seller_id: me.id,
         category,
@@ -71,20 +79,24 @@ export default function ListingForm() {
         : await supabase.from('listings').insert(row).select('status').single();
       if (error) throw error;
       if (data?.status === 'pending_review') {
-        notify('Sent for approval', 'The PASA team checks listings with photos to keep answer keys, exercises and quizzes off PASA. You\'ll be notified when it\'s live.');
+        notify(
+          'Sent for approval',
+          'Listings with photos are checked by the PASA team first, to keep answer keys and quizzes off PASA. You can see it under My listings on your profile, and you\'ll get a notification when it\'s live in Assets.',
+        );
+      } else {
+        toast(id ? 'Listing updated' : 'Listing published');
       }
       router.back();
     } catch (e) {
-      notify('Could not save', (e as Error).message);
+      toast((e as Error).message, 'error');
     } finally {
       setSaving(false);
+      setUploading(false);
     }
   };
 
-  const shownPhoto = photo?.uri ?? existingPhoto;
-
   return (
-    <Screen back title={id ? 'Edit listing' : 'List an item'} footer={<Button title={id ? 'Save changes' : 'Publish listing'} onPress={submit} loading={saving} />}>
+    <Screen back title={id ? 'Edit listing' : 'List an item'} footer={<Button title={uploading ? 'Uploading photo…' : id ? 'Save changes' : 'Publish listing'} onPress={submit} loading={saving} />}>
       <Card style={{ backgroundColor: colors.brandSoft, borderColor: colors.brandSoft }}>
         <Row style={{ alignItems: 'flex-start' }}>
           <Ionicons name="information-circle" size={20} color={colors.primaryDark} />
@@ -93,16 +105,15 @@ export default function ListingForm() {
           </Text>
         </Row>
       </Card>
-      <Pressable onPress={async () => setPhoto((await pickMedia({ aspect: [4, 3] })) ?? photo)}>
-        {shownPhoto ? (
-          <Image source={{ uri: shownPhoto }} style={{ width: '100%', height: 200, borderRadius: radius.md }} />
-        ) : (
-          <View style={{ height: 160, borderRadius: radius.md, borderWidth: 2, borderStyle: 'dashed', borderColor: colors.brand, alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.surface }}>
-            <Ionicons name="camera-outline" size={32} color={colors.primary} />
-            <Text style={{ color: colors.primary }}>Add a photo</Text>
-          </View>
-        )}
-      </Pressable>
+      <PhotoPicker
+        value={photo ?? existingPhoto}
+        onChange={(p) => {
+          setPhoto(p);
+          if (!p) setExistingPhoto(null);
+        }}
+        uploading={uploading}
+        allowRemove
+      />
       <ChipSelect label="Category" options={CATEGORIES.map((c) => c.key)} value={category} onChange={setCategory} format={(k) => categoryOf(k).label} />
       <ChipSelect label="Sell or rent out?" options={MODES} value={mode} onChange={setMode} format={(m) => (m === 'sale' ? 'For sale' : 'For rent')} />
       <Field label="Title" placeholder={category === 'book' ? 'Advanced Algebra, 4th Ed.' : category === 'calculator' ? 'Casio fx-991ES Plus' : 'e.g. Lab gown, medium'} value={form.title} onChangeText={set('title')} />

@@ -11,6 +11,7 @@ import { peso } from '@/lib/format';
 import { checkText } from '@/lib/moderation';
 import { useSettings } from '@/lib/settings';
 import { supabase } from '@/lib/supabase';
+import { toast } from '@/lib/toast';
 import { uploadDocument, type Picked } from '@/lib/upload';
 import { colors } from '@/theme';
 
@@ -57,7 +58,7 @@ export default function BecomeTutor() {
         .eq('id', me.id);
       if (error) throw error;
       await refreshProfile();
-      if (!approved) notify('Application sent!', 'The PASA team will review your CV and documents. We\'ll notify you once you\'re approved.');
+      toast(approved ? 'Tutor profile saved' : 'Application sent for review');
       leave();
     } catch (e) {
       notify('Could not save', (e as Error).message);

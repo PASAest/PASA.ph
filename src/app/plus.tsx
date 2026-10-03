@@ -10,6 +10,7 @@ import { useMe } from '@/lib/auth';
 import { daysFromNow, isPlus, peso, shortDate } from '@/lib/format';
 import { PLUS_PLANS, useSettings } from '@/lib/settings';
 import { supabase } from '@/lib/supabase';
+import { toast } from '@/lib/toast';
 import { colors, font, radius } from '@/theme';
 
 // 3.10 · Boost a post/listing, or subscribe to PASA Plus (1-month free trial, then 1/3/6/12-month plans)
@@ -39,7 +40,7 @@ export default function Plus() {
     setBusy(false);
     if (error) return notify('Could not boost', error.message);
     await refreshProfile();
-    notify('Boosted!', `Your ${boost} stays at the top for ${settings.boost_days} days. ${me.plus_boosts_left - 1} boosts left.`);
+    toast(`Boosted for ${settings.boost_days} days · ${me.plus_boosts_left - 1} boosts left`);
     router.back();
   };
 
@@ -53,7 +54,7 @@ export default function Plus() {
     setBusy(false);
     if (error) return notify('Could not start trial', error.message);
     await refreshProfile();
-    notify('Welcome to PASA Plus! 🎉', 'Your free month has started.');
+    toast('Welcome to PASA Plus! Your free month has started.');
   };
 
   return (

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Image, Modal, Pressable, View } from 'react-native';
 import { Comments } from '@/components/Comments';
 import { LISTING_STATUS, ListingPhoto } from '@/components/ListingCard';
 import { MenuSheet, type MenuItem } from '@/components/MenuSheet';
@@ -14,7 +14,7 @@ import { fullName, peso, yearLabel } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
 import type { Comment, Listing } from '@/lib/types';
 import { useFocusLoad } from '@/lib/useFocusLoad';
-import { colors, font, radius, space } from '@/theme';
+import { colors, elevation, font, radius, space } from '@/theme';
 
 // 3.2 · Item detail: photo, price, title, author, description, seller, comments
 export default function ListingDetail() {
@@ -23,6 +23,7 @@ export default function ListingDetail() {
   const [listing, setListing] = useState<Listing | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [menu, setMenu] = useState(false);
+  const [viewer, setViewer] = useState(false);
 
   const load = async () => {
     const [l, c] = await Promise.all([
@@ -87,9 +88,22 @@ export default function ListingDetail() {
         )
       }
     >
-      <View style={{ borderRadius: radius.lg, overflow: 'hidden' }}>
-        <ListingPhoto listing={listing} height={240} />
-      </View>
+      <Pressable onPress={() => listing.photo_url && setViewer(true)} style={{ borderRadius: radius.lg, overflow: 'hidden', ...elevation() }} accessibilityLabel="View photo">
+        <ListingPhoto listing={listing} height={300} />
+        {!!listing.photo_url && (
+          <View style={{ position: 'absolute', right: 12, bottom: 12, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 999, padding: 8 }}>
+            <Ionicons name="expand" size={16} color="#fff" />
+          </View>
+        )}
+      </Pressable>
+      <Modal visible={viewer} transparent animationType="fade" onRequestClose={() => setViewer(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center' }} onPress={() => setViewer(false)}>
+          {!!listing.photo_url && <Image source={{ uri: listing.photo_url }} style={{ width: '100%', height: '80%' }} resizeMode="contain" />}
+          <View style={{ position: 'absolute', top: 50, right: 20 }}>
+            <Ionicons name="close" size={30} color="#fff" />
+          </View>
+        </Pressable>
+      </Modal>
       {mine && (listing.status === 'pending_review' || listing.status === 'rejected') && (
         <Card style={{ backgroundColor: listing.status === 'rejected' ? colors.dangerSoft : colors.brandSoft, borderColor: 'transparent', gap: 4 }}>
           <Text variant="title">{listing.status === 'rejected' ? 'Not approved' : 'Waiting for admin approval'}</Text>
@@ -101,19 +115,35 @@ export default function ListingDetail() {
         </Card>
       )}
       <View style={{ gap: 6 }}>
-        <Row style={{ flexWrap: 'wrap' }} gap={6}>
-          <Badge label={status.label} tone={status.tone} />
-          <Badge label={rent ? 'For rent' : 'For sale'} tone="blue" />
-          <Badge label={listing.condition} tone="gray" />
-        </Row>
-        <Text variant="h2">{listing.title}</Text>
-        {!!listing.book_author && <Text variant="muted">by {listing.book_author}</Text>}
-        <Text style={{ fontFamily: font.black, fontSize: 26, color: colors.primaryDark }}>
+        <Text style={{ fontFamily: font.display, fontSize: 32, color: colors.text, letterSpacing: -0.5 }}>
           {peso(listing.price)}
           {rent && <Text variant="muted"> / week</Text>}
         </Text>
         {rent && listing.deposit > 0 && <Text variant="muted">+ {peso(listing.deposit)} refundable deposit</Text>}
+        <Text variant="h2">{listing.title}</Text>
+        {!!listing.book_author && <Text variant="muted">by {listing.book_author}</Text>}
+        <Row style={{ flexWrap: 'wrap', marginTop: 4 }} gap={6}>
+          <Badge label={status.label} tone={status.tone} />
+          <Badge label={rent ? 'For rent' : 'For sale'} tone="blue" />
+          <Badge label={listing.condition} tone="gray" />
+          <Badge label={categoryOf(listing.category).label} tone="gray" />
+        </Row>
       </View>
+      <Pressable onPress={() => router.push(`/user/${listing.seller_id}`)}>
+        <Card>
+          <Row gap={12}>
+            <Avatar profile={listing.seller} size={46} />
+            <View style={{ flex: 1 }}>
+              <Text variant="muted" style={{ fontSize: 12 }}>
+                Sold by
+              </Text>
+              <Text variant="title">{fullName(listing.seller)}</Text>
+              <Text variant="muted">{listing.seller ? `${yearLabel(listing.seller.year_level)} · ${listing.seller.program}` : ''}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+          </Row>
+        </Card>
+      </Pressable>
       {!!listing.description && (
         <Card style={{ gap: 6 }}>
           <Text variant="title">Description</Text>
@@ -132,18 +162,6 @@ export default function ListingDetail() {
           </Text>
         </Row>
       </Card>
-      <Pressable onPress={() => router.push(`/user/${listing.seller_id}`)}>
-        <Card>
-          <Row gap={12}>
-            <Avatar profile={listing.seller} size={46} />
-            <View style={{ flex: 1 }}>
-              <Text variant="title">{fullName(listing.seller)}</Text>
-              <Text variant="muted">{listing.seller ? `${yearLabel(listing.seller.year_level)} · ${listing.seller.program}` : ''}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-          </Row>
-        </Card>
-      </Pressable>
       <Comments comments={comments} target={{ listing_id: listing.id }} onPosted={load} />
       <View style={{ height: space(2) }} />
       <MenuSheet visible={menu} onClose={() => setMenu(false)} items={menuItems} />

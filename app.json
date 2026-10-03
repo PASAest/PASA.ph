@@ -46,7 +46,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "PASA uses your photos for listing pictures and your profile photo."
+          "photosPermission": "PASA uses your photos for listing pictures and your profile photo.",
+          "cameraPermission": "PASA uses your camera to take photos of items you list and for your profile picture."
         }
       ],
       "expo-video"

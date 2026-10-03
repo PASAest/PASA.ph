@@ -76,39 +76,43 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
 
   return (
     <View style={{ gap: space(4) }}>
-      {/* Name and bio on the left, display photo on the right */}
-      <Card style={{ gap: space(3) }}>
-        <Row gap={14} style={{ alignItems: 'flex-start' }}>
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text variant="h2">{fullName(p)}</Text>
-            <Row style={{ flexWrap: 'wrap' }} gap={6}>
-              {p.verification_status === 'verified' ? (
-                <Badge label="Verified student" tone="green" icon="shield-checkmark" />
-              ) : (
-                <Badge label="Not verified" tone="gray" />
-              )}
-              {p.is_tutor && <Badge label="Tutor" tone="blue" icon="school" />}
-              {isPlus(p) && <Badge label="PASA Plus" tone="yellow" icon="star" />}
-            </Row>
-            <Text variant="muted">
-              {yearLabel(p.year_level)} · {p.program}
-            </Text>
-            <Text variant="muted">{p.school}</Text>
-            {statuses[p.id] && (
-              <Text variant="muted" style={{ fontSize: 12.5 }}>
-                ● {PRESENCE_LABEL[statuses[p.id]]}
-              </Text>
-            )}
-          </View>
+      {/* Header: photo, name, badges, quick stats, actions */}
+      <Card style={{ gap: space(3), paddingTop: 0, overflow: 'hidden' }}>
+        <View style={{ height: 64, marginHorizontal: -space(4), backgroundColor: colors.brandSoft }} />
+        <View style={{ marginTop: -50, alignItems: 'center', gap: 6 }}>
           <View>
-            <Avatar profile={p} size={84} />
-            <StatusDot status={statuses[p.id]} size={18} />
+            <View style={{ borderRadius: 999, borderWidth: 4, borderColor: colors.surface }}>
+              <Avatar profile={p} size={92} />
+            </View>
+            <StatusDot status={statuses[p.id]} size={20} />
           </View>
-        </Row>
-        {!!p.bio && <Text style={{ lineHeight: 21 }}>{p.bio}</Text>}
-        <Text variant="muted">
-          <Text style={{ fontFamily: font.bold }}>{connections}</Text> connections · Joined {shortDate(p.created_at)}
-        </Text>
+          <Text variant="h2" style={{ textAlign: 'center' }}>
+            {fullName(p)}
+          </Text>
+          <Text variant="muted" style={{ textAlign: 'center' }}>
+            {yearLabel(p.year_level)} · {p.program}
+          </Text>
+          <Text variant="muted" style={{ textAlign: 'center', fontSize: 12.5 }}>
+            {p.school}
+            {statuses[p.id] ? ` · ${PRESENCE_LABEL[statuses[p.id]]}` : ''}
+          </Text>
+          <Row style={{ flexWrap: 'wrap', justifyContent: 'center', marginTop: 2 }} gap={6}>
+            {p.verification_status === 'verified' ? (
+              <Badge label="Verified student" tone="green" icon="shield-checkmark" />
+            ) : (
+              <Badge label="Not verified" tone="gray" />
+            )}
+            {p.is_tutor && <Badge label="Tutor" tone="blue" icon="school" />}
+            {isPlus(p) && <Badge label="PASA Plus" tone="yellow" icon="star" />}
+          </Row>
+        </View>
+        {!!p.bio && <Text style={{ lineHeight: 21, textAlign: 'center' }}>{p.bio}</Text>}
+        <View style={styles.stats}>
+          <Stat value={tutorRating ? Number(tutorRating.avg_stars).toFixed(1) : sellerRating ? Number(sellerRating.avg_stars).toFixed(1) : '–'} label="Rating" />
+          <Stat value={String((tutorRating?.review_count ?? 0) + (sellerRating?.review_count ?? 0))} label="Reviews" />
+          <Stat value={String(connections)} label="Connections" />
+          <Stat value={String(listings.length)} label="Listings" />
+        </View>
         {isMe ? (
           <Row>
             <Button title="Edit profile" icon="create-outline" small style={{ flex: 1 }} onPress={() => router.push('/edit-profile')} />
@@ -126,9 +130,12 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
               onPress={toggleConnect}
             />
             <Button title="Message" icon="paper-plane-outline" variant="outline" small style={{ flex: 1 }} onPress={() => openChat(p.id)} />
-            <Button title="More" variant="outline" small onPress={() => setMenu(true)} />
+            <Button title="" icon="ellipsis-horizontal" variant="outline" small onPress={() => setMenu(true)} />
           </Row>
         )}
+        <Text variant="muted" style={{ textAlign: 'center', fontSize: 12 }}>
+          Joined {shortDate(p.created_at)}
+        </Text>
       </Card>
 
       {/* Ratings */}
@@ -236,6 +243,17 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
   );
 }
 
+function Stat({ value, label }: { value: string; label: string }) {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
+      <Text style={{ fontFamily: font.display, fontSize: 20, color: colors.text }}>{value}</Text>
+      <Text variant="muted" style={{ fontSize: 12 }}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 function RatingBlock({ label, rating }: { label: string; rating: Rating }) {
   return (
     <View style={{ gap: 2 }}>
@@ -250,5 +268,6 @@ function RatingBlock({ label, rating }: { label: string; rating: Rating }) {
 
 const styles = themed(() => StyleSheet.create({
   review: { gap: 4, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: space(3) },
+  stats: { flexDirection: 'row', paddingVertical: space(3), borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: space(3) },
 }));

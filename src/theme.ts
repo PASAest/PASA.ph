@@ -99,7 +99,19 @@ export const font = {
   semibold: 'Nunito_600SemiBold',
   bold: 'Nunito_700Bold',
   black: 'Nunito_800ExtraBold',
+  // Headings use the same characterful grotesque as the landing page.
+  display: 'BricolageGrotesque_800ExtraBold',
+  displayBold: 'BricolageGrotesque_700Bold',
 };
+
+/** Soft card shadow (lighter in light mode, deeper in dark mode). */
+export const elevation = () => ({
+  shadowColor: '#0B1A28',
+  shadowOpacity: scheme === 'dark' ? 0.35 : 0.07,
+  shadowRadius: 14,
+  shadowOffset: { width: 0, height: 4 },
+  elevation: 2,
+});
 
 export const radius = { sm: 8, md: 14, lg: 20, pill: 999 };
 export const space = (n: number) => n * 4;
