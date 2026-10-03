@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
-import { Mascot } from '@/components/Mascot';
+import { Logo } from '@/components/Logo';
 import { Screen } from '@/components/Screen';
 import { Button, Card, Row, Text, type IconName } from '@/components/ui';
 import { confirm, notify } from '@/lib/actions';
@@ -77,7 +77,7 @@ export default function Plus() {
       )}
 
       <Card style={{ gap: 14, alignItems: 'center' }}>
-        <Mascot size={80} waving />
+        <Logo size={96} variant="gold" />
         <Text variant="h2">PASA Plus</Text>
         <View style={{ gap: 10, alignSelf: 'stretch' }}>
           {perks.map((p) => (

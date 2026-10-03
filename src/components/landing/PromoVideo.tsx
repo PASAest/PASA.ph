@@ -1,11 +1,10 @@
 import { useVideoPlayer, VideoView } from 'expo-video';
 
-// Native fallback (the landing page is meant for the web, but the route exists in the app too).
-const SOURCE = 'https://pasa.vercel.app/media/pasa-promo-720.mp4';
+// Native fallback (the landing page is meant for the web, but the route exists in the app too). Apps may autoplay with sound.
+const SOURCE = 'https://pasaph.vercel.app/media/pasa-promo-720.mp4';
 
 export function PromoVideo() {
   const player = useVideoPlayer(SOURCE, (p) => {
-    p.muted = true;
     p.loop = true;
     p.play();
   });

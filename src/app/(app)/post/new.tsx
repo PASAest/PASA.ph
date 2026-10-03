@@ -7,7 +7,9 @@ import { Button, Field, Text } from '@/components/ui';
 import { SUBJECTS } from '@/config';
 import { notify } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
+import { peso } from '@/lib/format';
 import { checkText } from '@/lib/moderation';
+import { useSettings } from '@/lib/settings';
 import { supabase } from '@/lib/supabase';
 import type { PostType } from '@/lib/types';
 
@@ -27,6 +29,7 @@ const HINTS: Record<PostType, string> = {
 // 3a · Create post
 export default function NewPost() {
   const { me } = useMe();
+  const { settings } = useSettings();
   const [type, setType] = useState<PostType>('need_tutor');
   const [subject, setSubject] = useState<string | null>(null);
   const [budget, setBudget] = useState('');
@@ -36,6 +39,9 @@ export default function NewPost() {
 
   const submit = async () => {
     if (tutoring && !subject) return notify('Pick a subject');
+    if (tutoring && budget && Number(budget) < settings.min_tutor_rate) {
+      return notify('Rate too low', `The minimum is ${peso(settings.min_tutor_rate)} per hour. Leave it blank if you're not sure.`);
+    }
     if (body.trim().length < 10) return notify('Tell us a bit more', 'Write at least 10 characters.');
     const check = checkText(body);
     if (!check.ok) return notify('Post not published', check.reason);
@@ -73,8 +79,8 @@ export default function NewPost() {
       )}
       {tutoring && (
         <Field
-          label={type === 'need_tutor' ? 'Budget per hour (optional)' : 'Your rate per hour (optional)'}
-          placeholder="₱150"
+          label={`${type === 'need_tutor' ? 'Budget' : 'Your rate'} per hour (optional, minimum ${peso(settings.min_tutor_rate)})`}
+          placeholder={`₱${settings.min_tutor_rate}`}
           value={budget}
           onChangeText={(v) => setBudget(v.replace(/\D/g, ''))}
           keyboardType="number-pad"

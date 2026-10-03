@@ -385,6 +385,12 @@ begin
      and not (new.tutor_status = 'pending' or (new.tutor_status = 'none' and old.tutor_status <> 'none')) then
     raise exception 'Only admins can approve tutors';
   end if;
+  -- Tutor rates can't go below the minimum the admin set (checked when applying or changing the rate).
+  if new.tutor_status in ('pending', 'approved')
+     and (new.tutor_rate is distinct from old.tutor_rate or new.tutor_status is distinct from old.tutor_status)
+     and new.tutor_rate < (select min_tutor_rate from app_settings where id = 1) then
+    raise exception 'The minimum tutor rate is ₱% per hour', (select min_tutor_rate from app_settings where id = 1);
+  end if;
   -- is_tutor follows tutor_status: you're listed as a tutor only once approved.
   if new.is_tutor and new.tutor_status <> 'approved' then new.is_tutor := false; end if;
   return new;
@@ -392,6 +398,21 @@ end $$;
 drop trigger if exists profiles_guard on public.profiles;
 create trigger profiles_guard before update on public.profiles
   for each row execute function public.guard_profile();
+
+-- A budget or rate on a tutoring post can't be below the minimum tutor rate (blank is fine).
+create or replace function public.guard_post_rate()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  min_rate int := (select min_tutor_rate from app_settings where id = 1);
+begin
+  if new.type <> 'general' and new.budget is not null and new.budget < min_rate then
+    raise exception 'The minimum rate is ₱% per hour', min_rate;
+  end if;
+  return new;
+end $$;
+drop trigger if exists posts_rate_guard on public.posts;
+create trigger posts_rate_guard before insert or update of budget, type on public.posts
+  for each row execute function public.guard_post_rate();
 
 -- Listings with a photo wait for an admin to check them (no answer keys, quizzes, etc.).
 create or replace function public.guard_listing()

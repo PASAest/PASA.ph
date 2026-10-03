@@ -172,7 +172,7 @@ export default function Landing() {
         {/* Top bar */}
         <View style={[section, styles.nav]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Logo size={34} />
+            <Logo size={34} variant={mode} />
             <Text style={{ fontFamily: H, fontSize: 24, color: P.ink }}>PASA</Text>
           </View>
           {wide && (
@@ -431,7 +431,7 @@ export default function Landing() {
         {/* Footer */}
         <View style={[section, styles.footer]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Logo size={26} />
+            <Logo size={26} variant={mode} />
             <Text style={{ color: P.muted }}>© {new Date().getFullYear()} PASA · Turn Potential Into PASAbilities</Text>
           </View>
           <View style={{ flexDirection: 'row', gap: 22, flexWrap: 'wrap' }}>
