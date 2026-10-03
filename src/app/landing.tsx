@@ -140,15 +140,15 @@ export default function Landing() {
   // Leaving the landing page: bring the app's theme in line with what the visitor picked here.
   // Apply the visitor's choice to the app first (the screens rebuild here, where it already looks right),
   // then navigate once the rebuild has settled.
+  // Web: open the page with a normal browser load. In-app navigation from here into the sign-in screens can
+  // show the wrong screen (Log in landing on Welcome), and a fresh load also applies the theme picked here.
   const open = (href: '/welcome' | '/log-in' | '/terms' | '/admin') => {
-    if (theme.scheme === mode) return router.navigate(href);
-    // The choice is already saved (toggleMode); on the web a fresh page load picks it up everywhere.
     if (IS_WEB) {
       window.location.assign(href);
       return;
     }
-    theme.setMode(mode);
-    setTimeout(() => router.navigate(href), 200);
+    if (theme.scheme !== mode) theme.setMode(mode);
+    setTimeout(() => router.navigate(href), theme.scheme !== mode ? 200 : 0);
   };
   const start = () => open('/welcome');
   const setAnchor = (key: string, e: { nativeEvent: { layout: { y: number } } }) => {
