@@ -64,6 +64,14 @@ export function saveMode(mode: ThemeMode) {
   }
 }
 
+/** Web: tint the browser / status bar with the page background so the top edge blends in. */
+export function setBrowserBarColor(color: string) {
+  if (typeof document === 'undefined') return;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
+  document.documentElement.style.backgroundColor = color;
+  document.body.style.backgroundColor = color;
+}
+
 /** The live palette. Its values are swapped in place when the theme changes. */
 export const colors = { ...light };
 export let scheme: Scheme = 'light';
@@ -74,6 +82,7 @@ export function applyScheme(next: Scheme) {
   Object.assign(colors, next === 'dark' ? dark : light);
   scheme = next;
   version++;
+  setBrowserBarColor(colors.bg);
 }
 
 /**

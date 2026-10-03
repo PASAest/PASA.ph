@@ -8,11 +8,12 @@ import { PromoVideo } from '@/components/landing/PromoVideo';
 import { Logo } from '@/components/Logo';
 import { Loading, Text, type IconName } from '@/components/ui';
 import { ANDROID_APK_URL, CATEGORIES, CONTACT_EMAIL, FACEBOOK_URL, PROGRAMS, SCHOOLS, SUBJECTS } from '@/config';
+import { isInstalledApp } from '@/lib/appMode';
 import { useAuth } from '@/lib/auth';
 import { peso } from '@/lib/format';
 import { PLUS_PLANS, useSettings } from '@/lib/settings';
 import { useTheme } from '@/lib/themeMode';
-import { font, saveMode, type Scheme } from '@/theme';
+import { font, saveMode, setBrowserBarColor, type Scheme } from '@/theme';
 
 // The landing page has its own "campus notice board" look: warm paper, navy ink, sky blue, a marker yellow.
 // It has a matching dark version; switching fades between them instead of reloading the page.
@@ -87,6 +88,7 @@ function useLandingTheme(mode: Scheme) {
     const root = document.getElementById('landing-root');
     if (!root) return;
     root.setAttribute('data-mode', mode);
+    setBrowserBarColor((mode === 'dark' ? DARK : LIGHT).paper);
     // Turn transitions on only after the first paint, so the page doesn't fade in from light on load.
     if (!root.hasAttribute('data-ready')) requestAnimationFrame(() => root.setAttribute('data-ready', ''));
   });
@@ -129,7 +131,14 @@ export default function Landing() {
   const wide = width >= 980;
   const pad = wide ? 56 : 20;
 
-  if (session) return <Redirect href="/(tabs)" />;
+  // The landing page is for browsers only. Inside the app (or the home-screen web app) go straight to the app.
+  if (isInstalledApp()) {
+    if (IS_WEB && !session) {
+      window.location.replace('/log-in'); // full load: in-app navigation into sign-in can show Welcome instead
+      return null;
+    }
+    return <Redirect href={session ? '/(tabs)' : '/log-in'} />;
+  }
   if (!fontsLoaded) return <Loading />;
 
   const toggleMode = () => {
@@ -142,7 +151,7 @@ export default function Landing() {
   // then navigate once the rebuild has settled.
   // Web: open the page with a normal browser load. In-app navigation from here into the sign-in screens can
   // show the wrong screen (Log in landing on Welcome), and a fresh load also applies the theme picked here.
-  const open = (href: '/welcome' | '/log-in' | '/terms' | '/admin') => {
+  const open = (href: '/' | '/welcome' | '/log-in' | '/terms' | '/admin') => {
     if (IS_WEB) {
       window.location.assign(href);
       return;
@@ -191,10 +200,16 @@ export default function Landing() {
           )}
           <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
             <ThemeToggle dark={mode === 'dark'} onPress={toggleMode} />
-            <Text onPress={() => open('/log-in')} style={styles.navLink}>
-              Log in
-            </Text>
-            <Btn title="Sign up" onPress={start} small />
+            {session ? (
+              <Btn title="Open app" onPress={() => open('/')} small />
+            ) : (
+              <>
+                <Text onPress={() => open('/log-in')} style={styles.navLink}>
+                  Log in
+                </Text>
+                <Btn title="Sign up" onPress={start} small />
+              </>
+            )}
           </View>
         </View>
 

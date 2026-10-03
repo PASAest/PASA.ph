@@ -3,7 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+    <!-- No viewport-fit=cover: the page starts below the iPhone status bar. Content placed under it gets blurred
+         by iOS 26's status-bar edge effect (it blurred the chat header). The status bar takes theme-color. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <!-- Installable app ("Add to Home Screen") -->
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
