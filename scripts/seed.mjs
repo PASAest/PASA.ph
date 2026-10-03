@@ -1,4 +1,4 @@
-// Adds demo content (posts, listings in every category, reviews, a chat) for the 4 demo users.
+// Adds demo content (posts, listings in every category, reviews, a chat) for the 4 demo users and the 11 group members.
 // 1. Create the users first: run supabase/seed-users.sql in the Supabase SQL Editor.
 // 2. Then: npm run seed   (reads EXPO_PUBLIC_SUPABASE_* from .env)
 // Safe to re-run: content is only created once per user.
@@ -46,6 +46,46 @@ const people = {
   carlo: {
     first_name: 'Carlo', last_name: 'Mendoza', program: 'BS Business Administration', year_level: 2,
     bio: 'Selling my old books and calcu. Message me!',
+  },
+  // Group members
+  april: { first_name: 'April Jean', bio: 'BSA girlie. Will trade notes for coffee ☕' },
+  chaelly: { first_name: 'Chaelly Anne', bio: 'Psych major. Always looking for study buddies.' },
+  michael: {
+    first_name: 'Michael Angelo', bio: 'IT senior. I build web apps and debug other people’s code for fun.',
+    tutor: {
+      tutor_subjects: ['Programming', 'Web Development', 'Database Systems'],
+      tutor_rate: 180,
+      tutor_about: '4th year IT. I can help with Java, Python, HTML/CSS/JS and SQL. We go through your actual code on screen share.',
+    },
+  },
+  niamh: {
+    first_name: 'Niamh Rylee', bio: 'Future English teacher. Grammar is my love language.',
+    tutor: {
+      tutor_subjects: ['Purposive Communication', 'English', 'Research Writing'],
+      tutor_rate: 150,
+      tutor_about: '3rd year BSEd English. I help with essays, reports, research papers and oral presentations. Send your draft before our session.',
+    },
+  },
+  leejhen: { first_name: 'Leejhen', bio: 'CE student surviving on plates and coffee.' },
+  mishi: { first_name: 'Mishi Nicole', bio: 'HM freshie. Ask me about baking 🧁' },
+  geneva: {
+    first_name: 'Geneva Andrey', bio: 'Graduating BSA. Board exam reviewee soon 🙏',
+    tutor: {
+      tutor_subjects: ['Financial Accounting', 'Auditing', 'Taxation'],
+      tutor_rate: 200,
+      tutor_about: '4th year BSA with a consistent 1.5 GWA. I teach FAR, Auditing and Taxation with board-exam-style drills.',
+    },
+  },
+  karen: { first_name: 'Karen Joy', bio: 'Nursing student. Duty days are long but worth it.' },
+  janna: { first_name: 'Miel Janna Shanelle', bio: 'CS freshie learning to code one bug at a time.' },
+  mariekrystel: { first_name: 'Mariekrystel', bio: 'Marketing major. I like nice notebooks and nicer layouts.' },
+  graziela: {
+    first_name: 'Graziela', bio: 'Math major. Numbers make sense to me, people less so 😄',
+    tutor: {
+      tutor_subjects: ['Calculus', 'Statistics', 'Algebra'],
+      tutor_rate: 160,
+      tutor_about: '4th year BS Math. I break problems down step by step and give you practice sets after every session.',
+    },
   },
 };
 
@@ -196,4 +236,87 @@ if (!msgCount) {
   await miguel.client.from('messages').insert({ conversation_id: convo, sender_id: miguel.id, body: 'Hi Andrea! Yes, Thursday afternoon works. Book me through PASA so it’s recorded 😊' });
 }
 
-console.log('\nDone! Log in as andrea@pasa.test, miguel@pasa.test, bea@pasa.test or carlo@pasa.test (password: SEED_PASSWORD in .env).');
+// ── Group members ──
+const g = {};
+for (const handle of ['april', 'chaelly', 'michael', 'niamh', 'leejhen', 'mishi', 'geneva', 'karen', 'janna', 'mariekrystel', 'graziela']) {
+  try {
+    g[handle] = await login(handle);
+  } catch (e) {
+    console.warn(`! skipped ${handle}: ${e.message}`);
+  }
+}
+const post = (handle, hours, type, subject, body, budget) =>
+  g[handle] && once(g[handle].client, 'posts', 'author_id', g[handle].id, [
+    { author_id: g[handle].id, type, subject, body, created_at: hoursAgo(hours), ...(budget ? { budget } : {}) },
+  ]);
+
+await post('april', 1, 'need_tutor', 'Intermediate Accounting', 'Anyone free to explain PPE depreciation methods? I keep mixing up SYD and double declining 😩 Free Wed after 4pm.', 180);
+await post('chaelly', 3, 'need_tutor', 'Statistics', 'Need help with t-tests and ANOVA for our research paper. Can do a Zoom session this weekend!', 160);
+await post('michael', 4, 'offer_tutoring', 'Programming', 'Finals project stressing you out? I can help you debug Java, Python or web projects over screen share. Book me on PASA 💻', 180);
+await post('niamh', 6, 'offer_tutoring', 'Research Writing', 'Writing your RRL or methodology? I can check your draft and help with APA 7th citations. 1-hour online sessions.', 150);
+await post('leejhen', 9, 'general', '', 'Does anyone have a spare drafting set I can rent for Engineering Drawing? Mine broke 😭 Check Assets if you’re selling one!');
+await post('mishi', 12, 'need_tutor', 'Mathematics in the Modern World', 'Help! Logic and set theory are confusing me. Looking for a patient tutor before the midterms.', 150);
+await post('geneva', 14, 'offer_tutoring', 'Auditing', 'BSA juniors: I’m opening Auditing and Taxation review sessions for the midterms. Board-exam-style drills, small groups welcome 📚', 200);
+await post('karen', 18, 'general', '', 'Selling my extra nursing scrubs and a stethoscope in Assets. Freshies, message me before you buy new ones!');
+await post('janna', 22, 'need_tutor', 'Programming', 'First time coding and loops are confusing me. Anyone who can explain for/while loops in Python? 🥲', 150);
+await post('mariekrystel', 26, 'general', '', 'Tip: you can rent books on PASA for the sem instead of buying. Saved ₱800 this term!');
+await post('graziela', 30, 'offer_tutoring', 'Calculus', 'Calculus 1 and 2 tutoring: limits, derivatives, integrals. I give practice sets after every session. Online via Google Meet.', 160);
+
+const addListingsFor = (handle, rows) => (g[handle] ? addListings(g[handle].client, g[handle].id, rows) : 0);
+const groupItems = [
+  await addListingsFor('april', [
+    { category: 'book', mode: 'sale', title: 'Intermediate Accounting Vol. 2', book_author: 'Valix, Peralta', condition: 'Good', price: 450, description: 'Some yellow highlights but no writing. Great for ACCO 3.' },
+    { category: 'calculator', mode: 'rent', title: 'Casio fx-991ES Plus (Rent)', condition: 'Good', price: 35, deposit: 400, description: 'Rent for exam week. Deposit returned when you give it back.' },
+  ]),
+  await addListingsFor('chaelly', [
+    { category: 'book', mode: 'sale', title: 'Psychology: Themes and Variations', book_author: 'Weiten', condition: 'Good', price: 550, description: 'Used for Intro to Psych. Clean pages, small dent on the cover.' },
+    { category: 'school_supplies', mode: 'sale', title: 'Highlighter and Sticky Notes Set', condition: 'Brand new', price: 95, description: 'Pastel highlighters (6) plus sticky tabs. Unopened.' },
+  ]),
+  await addListingsFor('michael', [
+    { category: 'gadget', mode: 'sale', title: 'Logitech Wireless Mouse M185', condition: 'Like new', price: 350, description: 'Switched to a trackpad. Comes with the USB receiver.' },
+    { category: 'book', mode: 'rent', title: 'Head First Java, 3rd Ed.', book_author: 'Sierra, Bates', condition: 'Good', price: 50, deposit: 400, description: 'Best book for learning OOP. Rent it for the whole sem.' },
+  ]),
+  await addListingsFor('niamh', [
+    { category: 'book', mode: 'sale', title: 'Purposive Communication (with workbook)', condition: 'Like new', price: 170, description: 'Workbook pages are still blank. GE requirement for all programs.' },
+  ]),
+  await addListingsFor('leejhen', [
+    { category: 'drafting_tools', mode: 'sale', title: 'Technical Pens Set (0.1 to 0.8)', condition: 'Good', price: 300, description: 'Complete set of 6. All ink cartridges still working.' },
+    { category: 'book', mode: 'sale', title: 'Engineering Mechanics: Statics', book_author: 'Hibbeler', condition: 'Fair', price: 480, description: 'Spine is worn but all pages are intact. Has my solved examples in pencil.' },
+  ]),
+  await addListingsFor('mishi', [
+    { category: 'uniform', mode: 'sale', title: 'HM Kitchen Uniform (Small)', condition: 'Like new', price: 400, description: 'Chef’s jacket, apron and toque. Worn twice for lab class.' },
+  ]),
+  await addListingsFor('geneva', [
+    { category: 'book', mode: 'sale', title: 'Auditing Theory', book_author: 'Salosagcol', condition: 'Good', price: 380, description: 'Board-exam reviewer. A few notes in the margins that actually help.' },
+    { category: 'book', mode: 'rent', title: 'Income Taxation', book_author: 'Valencia, Roxas', condition: 'Good', price: 45, deposit: 350, description: 'Latest TRAIN law edition. Rent weekly or for the sem.' },
+  ]),
+  await addListingsFor('karen', [
+    { category: 'lab_equipment', mode: 'sale', title: 'Littmann Classic III Stethoscope', condition: 'Like new', price: 3500, description: 'Got a cardiology one, so selling this. Original box included.' },
+    { category: 'uniform', mode: 'sale', title: 'Nursing Scrubs Set (Medium)', condition: 'Good', price: 450, description: 'Two sets, washed and ironed. School-approved color.' },
+  ]),
+  await addListingsFor('janna', [
+    { category: 'school_supplies', mode: 'sale', title: 'A4 Clearbook and Folder Bundle', condition: 'Brand new', price: 80, description: 'Extras from enrollment. 3 clearbooks and 5 folders.' },
+  ]),
+  await addListingsFor('mariekrystel', [
+    { category: 'book', mode: 'sale', title: 'Marketing Management, 15th Ed.', book_author: 'Kotler, Keller', condition: 'Good', price: 520, description: 'Required for MKTG 101. Light highlights in early chapters.' },
+    { category: 'school_supplies', mode: 'sale', title: 'Dotted Journal and Brush Pens', condition: 'Brand new', price: 220, description: 'Perfect for notes and planners. Still sealed.' },
+  ]),
+  await addListingsFor('graziela', [
+    { category: 'gadget', mode: 'rent', title: 'Casio fx-CG50 Graphing Calculator', condition: 'Like new', price: 90, deposit: 2000, description: 'Color graphing calculator for Calculus and Stats. Rent weekly.' },
+    { category: 'book', mode: 'sale', title: 'Calculus with Analytic Geometry', book_author: 'Leithold', condition: 'Good', price: 400, description: 'Classic Leithold. Solved exercises in pencil, easy to erase.' },
+  ]),
+].reduce((a, b) => a + b, 0);
+console.log(`✓ ${groupItems} new group item${groupItems === 1 ? '' : 's'} added to Assets`);
+
+// A few reviews for the group tutors (each one added once).
+const reviewIf = async (from, to, ...rest) => {
+  if (!g[from] || !g[to]) return;
+  const { count } = await g[from].client.from('reviews').select('id', { count: 'exact', head: true }).eq('reviewer_id', g[from].id).eq('reviewee_id', g[to].id);
+  if (!count) await review(g[from].client, g[from].id, g[to].id, ...rest);
+};
+await reviewIf('april', 'geneva', 'tutor', 5, 'Geneva’s drills are exactly like the exam. Passed my Auditing quiz!');
+await reviewIf('janna', 'michael', 'tutor', 5, 'Fixed my Python project in one session and explained everything.');
+await reviewIf('chaelly', 'graziela', 'tutor', 5, 'Stats finally makes sense. Super patient!');
+await reviewIf('mishi', 'niamh', 'tutor', 4, 'Very helpful with my essay structure.');
+
+console.log('\nDone! Log in as andrea@pasa.test, miguel@pasa.test, bea@pasa.test, carlo@pasa.test, or a group member like april@pasa.test (password: SEED_PASSWORD in .env).');
