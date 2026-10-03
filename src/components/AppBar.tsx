@@ -14,7 +14,7 @@ export function AppBar({ action }: { action?: ReactNode }) {
   const insets = useSafeAreaInsets();
   const unread = useUnreadCount();
   return (
-    <View style={[styles.bar, { paddingTop: insets.top + 18 }]}>
+    <View style={[styles.bar, { paddingTop: insets.top + 34 }]}>
       <View style={styles.logo}>
         <Logo size={34} />
         <Text style={styles.word}>PASA</Text>

@@ -46,6 +46,7 @@ export function ListingCard({ listing, favorite, onToggleFavorite }: { listing: 
           {boosted && (
             <View style={[styles.tag, { backgroundColor: colors.warningSoft }]}>
               <Ionicons name="flash" size={10} color={colors.warning} />
+              <Text style={[styles.tagText, { color: colors.warning, marginLeft: 3 }]}>BOOSTED</Text>
             </View>
           )}
         </View>

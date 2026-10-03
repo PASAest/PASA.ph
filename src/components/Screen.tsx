@@ -27,7 +27,7 @@ export function Screen({ children, title, back, right, scroll = true, refreshing
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Stack.Screen options={{ headerShown: false }} />
       {(title || back) && (
-        <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 26 }]}>
           {back ? (
             <Pressable
               onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
