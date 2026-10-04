@@ -132,6 +132,9 @@ export type Message = {
   attachment_path: string | null;
   attachment_type: 'image' | 'video' | null;
   created_at: string;
+  /** Set when the other person's app received it, and when they opened the chat. */
+  delivered_at: string | null;
+  seen_at: string | null;
 };
 
 export type Payout = {

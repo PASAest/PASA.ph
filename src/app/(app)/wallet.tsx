@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { METHODS } from '@/components/FakeWallet';
 import { Screen } from '@/components/Screen';
 import { SelectField } from '@/components/SelectField';
+import { WalletLock } from '@/components/WalletLock';
 import { Badge, Button, Card, DemoBanner, Empty, Field, Loading, Row, Text } from '@/components/ui';
 import { notify } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
@@ -28,8 +29,13 @@ type Earning = {
 /** What the tutor/seller earns from one payment (older payments didn't store it, so estimate). */
 const earned = (p: Earning) => p.payee_amount ?? p.amount - p.fee;
 
-// Tutor's / seller's wallet: earnings released by PASA, pending payments, and withdrawals to GCash or Maya (demo)
+// Tutor's / seller's wallet: earnings released by PASA, pending payments, and withdrawals to GCash or Maya (demo).
+// Opens only after the wallet PIN.
 export default function Wallet() {
+  return <WalletLock>{(changePin) => <WalletContent changePin={changePin} />}</WalletLock>;
+}
+
+function WalletContent({ changePin }: { changePin: () => void }) {
   const { me } = useMe();
   const [earnings, setEarnings] = useState<Earning[] | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
@@ -105,6 +111,7 @@ export default function Wallet() {
           </Row>
         </Card>
       )}
+      <Button title="Change wallet PIN" icon="lock-closed-outline" variant="ghost" small onPress={changePin} />
       <Text variant="muted" style={{ fontSize: 12.5 }}>
         Money from a session or sale is "pending" until the student confirms the session or the buyer confirms they got the item. Then it moves to your balance.
       </Text>

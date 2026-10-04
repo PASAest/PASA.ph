@@ -13,6 +13,7 @@ import { useFocusLoad } from '@/lib/useFocusLoad';
 import { colors, font, space, themed } from '@/theme';
 import { ListingCard } from './ListingCard';
 import { MenuSheet } from './MenuSheet';
+import { useGridColumns } from './PhoneFrame';
 import { StatusDot } from './StatusDot';
 import { Avatar, Badge, Button, Card, Empty, Loading, Row, Stars, Text } from './ui';
 
@@ -61,6 +62,8 @@ export function useProfileData(userId: string) {
 export function ProfileView({ data, reload }: { data: Data | null; reload: () => Promise<void> }) {
   const { me } = useMe();
   const [menu, setMenu] = useState(false);
+  const cols = useGridColumns();
+  const cardWidth = `${cols === 4 ? 23.5 : cols === 3 ? 31.5 : 48}%` as const;
   // Shown right away on tap, until the reload brings the saved state back.
   const [shownLink, setShownLink] = useState<Data['link'] | null>(null);
   const statuses = useStatuses([data?.profile.id]);
@@ -284,9 +287,13 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
         ) : (
           <View style={styles.grid}>
             {listings.map((l) => (
-              <View key={l.id} style={{ width: '48%' }}>
+              <View key={l.id} style={{ width: cardWidth }}>
                 <ListingCard listing={l} />
               </View>
+            ))}
+            {/* empty slots so a short last row lines up with the rows above */}
+            {Array.from({ length: (cols - (listings.length % cols)) % cols }, (_, i) => (
+              <View key={`pad-${i}`} style={{ width: cardWidth }} />
             ))}
           </View>
         )}

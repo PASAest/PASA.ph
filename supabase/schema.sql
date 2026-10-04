@@ -481,6 +481,95 @@ create or replace view public.profile_ratings with (security_invoker = true) as
 -- ─────────────────────────────────────────────────────────────
 -- Helpers
 -- ─────────────────────────────────────────────────────────────
+-- Message receipts: delivered when the other person's app receives it, seen when they open the chat.
+alter table public.messages add column if not exists delivered_at timestamptz;
+alter table public.messages add column if not exists seen_at timestamptz;
+
+-- Marks everything sent to me as delivered (called when the app is open and when a message arrives).
+create or replace function public.mark_messages_delivered()
+returns void language sql security definer set search_path = public as $$
+  update messages m set delivered_at = now()
+  from conversations c
+  where m.conversation_id = c.id and auth.uid() in (c.user_a, c.user_b)
+    and m.sender_id <> auth.uid() and m.delivered_at is null;
+$$;
+
+-- Marks the messages sent to me in one conversation as seen (called while the chat is open).
+create or replace function public.mark_messages_seen(conv uuid)
+returns void language sql security definer set search_path = public as $$
+  update messages m set seen_at = now(), delivered_at = coalesce(m.delivered_at, now())
+  from conversations c
+  where m.conversation_id = conv and c.id = conv and auth.uid() in (c.user_a, c.user_b)
+    and m.sender_id <> auth.uid() and m.seen_at is null;
+$$;
+
+-- Wallet PIN: 4 digits, stored hashed in a table nobody can read directly (no policies). The app only asks
+-- these functions whether a PIN is right, so the hash can't be copied and guessed offline.
+create table if not exists public.wallet_pins (
+  user_id uuid primary key references public.profiles on delete cascade,
+  pin_hash text not null,
+  failed_attempts int not null default 0,
+  locked_until timestamptz,
+  updated_at timestamptz not null default now()
+);
+alter table public.wallet_pins enable row level security;
+
+-- {status: 'none' | 'set' | 'locked', locked_until}
+create or replace function public.wallet_pin_status()
+returns jsonb language sql stable security definer set search_path = public, extensions as $$
+  select jsonb_build_object(
+    'status', case when p.user_id is null then 'none' when p.locked_until > now() then 'locked' else 'set' end,
+    'locked_until', case when p.locked_until > now() then p.locked_until end)
+  from (select auth.uid() as uid) me left join wallet_pins p on p.user_id = me.uid;
+$$;
+
+-- Checks a PIN. 5 wrong tries lock it for 5 minutes. Returns {ok, attempts_left, locked_until}.
+create or replace function public.verify_wallet_pin(pin text)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare r wallet_pins;
+begin
+  select * into r from wallet_pins where user_id = auth.uid() for update;
+  if not found then return jsonb_build_object('ok', false, 'attempts_left', 0); end if;
+  if r.locked_until > now() then return jsonb_build_object('ok', false, 'attempts_left', 0, 'locked_until', r.locked_until); end if;
+  if extensions.crypt(pin, r.pin_hash) = r.pin_hash then
+    update wallet_pins set failed_attempts = 0, locked_until = null where user_id = r.user_id;
+    return jsonb_build_object('ok', true);
+  end if;
+  if r.failed_attempts + 1 >= 5 then
+    update wallet_pins set failed_attempts = 0, locked_until = now() + interval '5 minutes' where user_id = r.user_id;
+    return jsonb_build_object('ok', false, 'attempts_left', 0, 'locked_until', now() + interval '5 minutes');
+  end if;
+  update wallet_pins set failed_attempts = r.failed_attempts + 1 where user_id = r.user_id;
+  return jsonb_build_object('ok', false, 'attempts_left', 5 - (r.failed_attempts + 1));
+end $$;
+
+-- Sets the PIN. Allowed when there's no PIN yet, with the current PIN (counted like any other try, so it can't
+-- be used to guess), or within 10 minutes of signing in with the account password ("Forgot PIN").
+-- Returns {ok} or {ok: false, error, attempts_left, locked_until}.
+create or replace function public.set_wallet_pin(new_pin text, current_pin text default null)
+returns jsonb language plpgsql security definer set search_path = public, extensions as $$
+declare signed_in_at bigint; check_result jsonb;
+begin
+  if auth.uid() is null then raise exception 'Not signed in'; end if;
+  if new_pin !~ '^[0-9]{4}$' then return jsonb_build_object('ok', false, 'error', 'The PIN must be 4 digits'); end if;
+  if exists (select 1 from wallet_pins where user_id = auth.uid()) then
+    select max((a->>'timestamp')::bigint) into signed_in_at
+    from jsonb_array_elements(coalesce(auth.jwt()->'amr', '[]'::jsonb)) a where a->>'method' = 'password';
+    if signed_in_at is null or to_timestamp(signed_in_at) < now() - interval '10 minutes' then
+      if current_pin is null then
+        return jsonb_build_object('ok', false, 'error', 'Enter your current PIN, or confirm your password to reset it');
+      end if;
+      check_result := verify_wallet_pin(current_pin);
+      if not (check_result->>'ok')::boolean then
+        return check_result || jsonb_build_object('error', 'Your current PIN is wrong');
+      end if;
+    end if;
+  end if;
+  insert into wallet_pins (user_id, pin_hash) values (auth.uid(), extensions.crypt(new_pin, extensions.gen_salt('bf')))
+  on conflict (user_id) do update set pin_hash = excluded.pin_hash, failed_attempts = 0, locked_until = null, updated_at = now();
+  return jsonb_build_object('ok', true);
+end $$;
+
 -- Get or create the 1:1 conversation between the caller and another user.
 create or replace function public.start_conversation(other uuid)
 returns uuid language plpgsql security definer set search_path = public as $$

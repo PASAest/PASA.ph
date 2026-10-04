@@ -15,46 +15,7 @@ import { peso } from '@/lib/format';
 import { PLUS_PLANS, useSettings } from '@/lib/settings';
 import { useTheme } from '@/lib/themeMode';
 import { font, saveMode, setBrowserBarColor, type Scheme } from '@/theme';
-
-// The landing page has its own "campus notice board" look: warm paper, navy ink, sky blue, a marker yellow.
-// It has a matching dark version; switching fades between them instead of reloading the page.
-const LIGHT = {
-  paper: '#FAF9F5',
-  card: '#FFFFFF',
-  ink: '#10283D',
-  ink2: '#3D566B',
-  muted: '#6D8294',
-  rule: '#E4E6E3',
-  sky: '#87CEEB',
-  skySoft: '#E3F3FA',
-  blue: '#1E6A9E',
-  marker: '#FFE58A',
-  green: '#2E8B57',
-  tape: 'rgba(135,206,235,0.55)',
-  btn: '#10283D', // primary button
-  btnText: '#FFFFFF',
-  band: '#10283D', // closing call-to-action band
-  shadow: 0.1,
-};
-
-const DARK: typeof LIGHT = {
-  paper: '#0E1620',
-  card: '#152230',
-  ink: '#EAF2F8',
-  ink2: '#B3C4D2',
-  muted: '#8197A8',
-  rule: '#24364A',
-  sky: '#87CEEB',
-  skySoft: '#183247',
-  blue: '#86C9EE',
-  marker: '#F2D46A',
-  green: '#5CC98A',
-  tape: 'rgba(135,206,235,0.35)',
-  btn: '#87CEEB',
-  btnText: '#0E1620',
-  band: '#1A3550',
-  shadow: 0.35,
-};
+import { DARK, HEADING_FONT, LIGHT } from '@/components/landing/palette';
 
 type Palette = typeof LIGHT;
 type ColorKey = Exclude<keyof Palette, 'shadow'>;
@@ -101,7 +62,7 @@ const useStyles = () => {
   const P = usePal();
   return useMemo(() => makeStyles(P), [P]);
 };
-const H = 'BricolageGrotesque_800ExtraBold';
+const H = HEADING_FONT;
 const H7 = 'BricolageGrotesque_700Bold';
 const SCHOOL_NAMES = SCHOOLS.filter((s) => s !== 'Other');
 
@@ -152,7 +113,7 @@ export default function Landing() {
   // then navigate once the rebuild has settled.
   // Web: open the page with a normal browser load. In-app navigation from here into the sign-in screens can
   // show the wrong screen (Log in landing on Welcome), and a fresh load also applies the theme picked here.
-  const open = (href: '/' | '/welcome' | '/log-in' | '/terms' | '/admin') => {
+  const open = (href: '/' | '/welcome' | '/log-in' | '/legal' | '/admin') => {
     if (IS_WEB) {
       window.location.assign(href);
       return;
@@ -455,7 +416,7 @@ export default function Landing() {
             <Text style={{ color: P.muted }}>© {new Date().getFullYear()} PASA · Turn Potential Into PASAbilities</Text>
           </View>
           <View style={{ flexDirection: 'row', gap: 22, flexWrap: 'wrap' }}>
-            <FootLink label="Terms & privacy" onPress={() => open('/terms')} />
+            <FootLink label="Terms & privacy" onPress={() => open('/legal')} />
             {!!FACEBOOK_URL && <FootLink label="Facebook" onPress={() => Linking.openURL(FACEBOOK_URL)} />}
             {!!CONTACT_EMAIL && <FootLink label={CONTACT_EMAIL} onPress={() => Linking.openURL(`mailto:${CONTACT_EMAIL}`)} />}
             <FootLink label="Admin" onPress={() => open('/admin')} />

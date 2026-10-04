@@ -7,6 +7,7 @@ import { CategoryDropdown } from '@/components/CategoryDropdown';
 import { ListingCard } from '@/components/ListingCard';
 import { Button, Empty, SkeletonList } from '@/components/ui';
 import { FilterDropdown, type FilterOption } from '@/components/FilterDropdown';
+import { useGridColumns } from '@/components/PhoneFrame';
 import { useMe } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import type { Listing } from '@/lib/types';
@@ -24,6 +25,7 @@ const FILTERS: FilterOption<Filter>[] = [
 // 3.1 · Assets: academic items for sale or rent, with category and type filters
 export default function Assets() {
   const { me } = useMe();
+  const cols = useGridColumns();
   const [filter, setFilter] = useState<Filter>('all');
   const [category, setCategory] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -92,9 +94,10 @@ export default function Assets() {
         </View>
       </View>
       <FlatList
+        key={`cols-${cols}`} // FlatList can't change column count in place
         data={shown}
         keyExtractor={(l) => l.id}
-        numColumns={2}
+        numColumns={cols}
         columnWrapperStyle={{ gap: space(3) }}
         contentContainerStyle={{ padding: space(4), paddingTop: space(2), gap: space(3) }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />}
@@ -113,8 +116,8 @@ export default function Assets() {
         renderItem={({ item, index }) => (
           <>
             <ListingCard listing={item} favorite={favorites.has(item.id)} onToggleFavorite={() => toggleFavorite(item.id)} />
-            {/* keep the last odd card half-width */}
-            {index === shown.length - 1 && shown.length % 2 === 1 && <View style={{ flex: 1 }} />}
+            {/* keep cards in a short last row the same width as the others */}
+            {index === shown.length - 1 && Array.from({ length: (cols - (shown.length % cols)) % cols }, (_, i) => <View key={i} style={{ flex: 1 }} />)}
           </>
         )}
       />

@@ -6,6 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, font, space, themed } from '@/theme';
 import { Text } from './ui';
 
+/** Widest a regular page's content gets (forms, settings, details). */
+const CONTENT_MAX_WIDTH = 680;
+
 type Props = {
   children: ReactNode;
   title?: string;
@@ -22,7 +25,8 @@ type Props = {
 /** Standard page: safe area, optional header, scrolling body and a sticky footer for main actions. */
 export function Screen({ children, title, back, right, scroll = true, refreshing, onRefresh, footer, padded = true }: Props) {
   const insets = useSafeAreaInsets();
-  const body = padded ? { padding: space(4), gap: space(4) } : undefined;
+  // On tablets and laptops the page content sits in a centered column, so forms and text don't stretch edge to edge.
+  const body = [padded ? { padding: space(4), gap: space(4) } : undefined, styles.column];
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -48,16 +52,20 @@ export function Screen({ children, title, back, right, scroll = true, refreshing
       )}
       {scroll ? (
         <ScrollView
-          contentContainerStyle={[body, { paddingBottom: footer ? space(4) : insets.bottom + space(6) }]}
+          contentContainerStyle={[...body, { paddingBottom: footer ? space(4) : insets.bottom + space(6) }]}
           keyboardShouldPersistTaps="handled"
           refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={colors.primary} /> : undefined}
         >
           {children}
         </ScrollView>
       ) : (
-        <View style={[{ flex: 1 }, body]}>{children}</View>
+        <View style={[{ flex: 1 }, ...body]}>{children}</View>
       )}
-      {footer && <View style={[styles.footer, { paddingBottom: insets.bottom + space(3) }]}>{footer}</View>}
+      {footer && (
+        <View style={[styles.footer, { paddingBottom: insets.bottom + space(3) }]}>
+          <View style={[styles.column, { gap: space(2) }]}>{footer}</View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -72,6 +80,7 @@ const styles = themed(() => StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  column: { width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center' },
   headerBtn: { width: 64, justifyContent: 'center' },
   headerTitle: { flex: 1, textAlign: 'center', fontFamily: font.bold, fontSize: 17 },
   footer: {

@@ -11,6 +11,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { DeliveryReceipts } from '@/components/DeliveryReceipts';
 import { PhoneFrame } from '@/components/PhoneFrame';
 import { SetupNeeded } from '@/components/SetupNeeded';
 import { AuthProvider } from '@/lib/auth';
@@ -40,6 +41,7 @@ export default function RootLayout() {
             {isConfigured ? (
               <SettingsProvider>
                 <AuthProvider>
+                  <DeliveryReceipts />
                   <ThemeRemount>
                     <PhoneFrame>
                       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: 'slide_from_right' }} />

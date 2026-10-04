@@ -1,40 +1,39 @@
-import { usePathname } from 'expo-router';
 import type { ReactNode } from 'react';
 import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { colors, themed } from '@/theme';
 
-export const PHONE_WIDTH = 430;
+/** Widest the app's content gets on tablets and laptops; wider screens get even margins on both sides. */
+export const APP_MAX_WIDTH = 960;
+
+/** Width the app's screens actually get (the window, capped at APP_MAX_WIDTH). */
+export function useContentWidth() {
+  const { width } = useWindowDimensions();
+  return Math.min(width, APP_MAX_WIDTH);
+}
+
+/** Grid columns for item cards at the current width: 2 on phones, 3 on small tablets, 4 on large tablets and laptops. */
+export function useGridColumns() {
+  const w = useContentWidth();
+  return w >= 840 ? 4 : w >= 600 ? 3 : 2;
+}
 
 /**
- * On a laptop browser, shows the student app in a centered phone-sized column so it looks like the mobile app.
- * Phones, narrow windows, the landing page and the /admin panel render full width.
+ * Lets the app fill tablets and laptops (instead of a phone-sized column), with content centered and capped at
+ * APP_MAX_WIDTH so lines don't stretch across a wide monitor. Phones render as before.
  */
 export function PhoneFrame({ children }: { children: ReactNode }) {
   const { width } = useWindowDimensions();
-  const path = usePathname();
-  const framed = Platform.OS === 'web' && width > 600 && !path.startsWith('/admin') && path !== '/landing';
-  if (!framed) return <View style={{ flex: 1 }}>{children}</View>;
+  if (Platform.OS !== 'web' || width <= APP_MAX_WIDTH) return <View style={{ flex: 1 }}>{children}</View>;
   return (
     <View style={styles.backdrop}>
-      <View style={styles.phone}>{children}</View>
+      <View style={styles.column}>{children}</View>
     </View>
   );
 }
 
-const styles = themed(() => StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: colors.backdrop, alignItems: 'center', paddingVertical: 24 },
-  phone: {
-    flex: 1,
-    width: PHONE_WIDTH,
-    maxHeight: 932,
-    backgroundColor: colors.bg,
-    borderRadius: 28,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: '#16324A',
-    shadowOpacity: 0.12,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: 10 },
-  },
-}));
+const styles = themed(() =>
+  StyleSheet.create({
+    backdrop: { flex: 1, backgroundColor: colors.bg, alignItems: 'center' },
+    column: { flex: 1, width: '100%', maxWidth: APP_MAX_WIDTH, borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border },
+  }),
+);

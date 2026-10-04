@@ -18,6 +18,9 @@ import { pickMedia, signedUrls, uploadChatMedia } from '@/lib/upload';
 import { colors, font, radius, space, themed } from '@/theme';
 
 // 3.3 · Chat thread (live via Supabase Realtime) with photo and video attachments
+/** Where my message is: saved, received by their app, or opened by them. */
+const receipt = (m: Message) => (m.seen_at ? 'Seen' : m.delivered_at ? 'Delivered' : 'Sent');
+
 export default function Chat() {
   const { id, draft } = useLocalSearchParams<{ id: string; draft?: string }>();
   const { me } = useMe();
@@ -53,6 +56,7 @@ export default function Chat() {
       setOther(p);
       setMessages(m ?? []);
       setBlocked((b ?? []).length > 0);
+      supabase.rpc('mark_messages_seen', { conv: id }).then();
     })();
 
     const channel = supabase
@@ -60,6 +64,13 @@ export default function Chat() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${id}` }, (payload) => {
         const msg = payload.new as Message;
         setMessages((prev) => (prev.some((x) => x.id === msg.id) ? prev : [...prev, msg]));
+        // I'm looking at the chat, so their new message is seen right away.
+        if (msg.sender_id !== me.id) supabase.rpc('mark_messages_seen', { conv: id }).then();
+      })
+      // Delivered / seen updates on my messages.
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${id}` }, (payload) => {
+        const msg = payload.new as Message;
+        setMessages((prev) => prev.map((x) => (x.id === msg.id ? { ...x, delivered_at: msg.delivered_at, seen_at: msg.seen_at } : x)));
       })
       .subscribe();
 
@@ -70,6 +81,9 @@ export default function Chat() {
       supabase.removeChannel(channel);
     };
   }, [id, me.id]);
+
+  // The "Sent / Delivered / Seen" line goes under my latest message only.
+  const lastMineId = [...messages].reverse().find((m) => m.sender_id === me.id)?.id;
 
   const send = async () => {
     const body = text.trim();
@@ -137,6 +151,7 @@ export default function Chat() {
 
       <FlatList
         ref={list}
+        extraData={lastMineId}
         data={messages}
         keyExtractor={(m) => m.id}
         contentContainerStyle={{ padding: space(4), gap: 6 }}
@@ -151,13 +166,27 @@ export default function Chat() {
         }
         renderItem={({ item }) => {
           const mine = item.sender_id === me.id;
+          const status = receipt(item);
           return (
-            <View style={[styles.bubble, mine ? styles.mine : styles.theirs, !!item.attachment_path && { padding: 4 }]}>
-              {item.attachment_path && item.attachment_type && <ChatMedia url={mediaUrls[item.attachment_path]} type={item.attachment_type} />}
-              {!!item.body && <Text style={{ color: mine ? colors.white : colors.text }}>{item.body}</Text>}
-              <Text style={{ fontSize: 10.5, color: mine ? 'rgba(255,255,255,0.8)' : colors.muted, alignSelf: 'flex-end' }}>
-                {new Date(item.created_at).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })}
-              </Text>
+            <View style={{ gap: 3 }}>
+              <View style={[styles.bubble, mine ? styles.mine : styles.theirs, !!item.attachment_path && { padding: 4 }]}>
+                {item.attachment_path && item.attachment_type && <ChatMedia url={mediaUrls[item.attachment_path]} type={item.attachment_type} />}
+                {!!item.body && <Text style={{ color: mine ? colors.white : colors.text }}>{item.body}</Text>}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-end' }}>
+                  <Text style={{ fontSize: 10.5, color: mine ? 'rgba(255,255,255,0.8)' : colors.muted }}>
+                    {new Date(item.created_at).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })}
+                  </Text>
+                  {mine && (
+                    <Ionicons
+                      name={status === 'Sent' ? 'checkmark' : 'checkmark-done'}
+                      size={14}
+                      color={status === 'Seen' ? colors.white : 'rgba(255,255,255,0.65)'}
+                      accessibilityLabel={status}
+                    />
+                  )}
+                </View>
+              </View>
+              {mine && item.id === lastMineId && <Text style={styles.receipt}>{status === 'Seen' && item.seen_at ? `Seen ${new Date(item.seen_at).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })}` : status}</Text>}
             </View>
           );
         }}
@@ -215,6 +244,7 @@ const styles = themed(() => StyleSheet.create({
   },
   notice: { flexDirection: 'row', gap: 6, backgroundColor: colors.brandSoft, borderRadius: radius.sm, padding: 8, marginBottom: 8 },
   bubble: { maxWidth: '80%', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8, gap: 2 },
+  receipt: { alignSelf: 'flex-end', fontSize: 11.5, color: colors.muted, marginRight: 4 },
   mine: { alignSelf: 'flex-end', backgroundColor: colors.primary, borderBottomRightRadius: 4 },
   theirs: { alignSelf: 'flex-start', backgroundColor: colors.surface, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: colors.border },
   composer: { paddingHorizontal: space(3), paddingTop: 10, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
