@@ -6,9 +6,12 @@ import { PixelRatio, Pressable, useWindowDimensions, View } from 'react-native';
 // with the page, so when that happens the video plays muted and its sound comes on at the visitor's first
 // tap, click or key press anywhere on the page. It plays whenever it's on screen and pauses when scrolled away.
 const VIDEO_ID = 'pasa-promo-video';
-const ACTIVATION_EVENTS = ['pointerdown', 'keydown', 'touchend'] as const;
+// Events that count as a real interaction for the browser (pointerdown doesn't on phones, so it can't unmute).
+const ACTIVATION_EVENTS = ['click', 'touchend', 'pointerup', 'keydown'] as const;
 // Set once the visitor mutes on purpose, so the video never turns its sound back on by itself (one video per page).
 let chosenMute = false;
+// When the first tap turned the sound on (so a tap on the sound button itself doesn't immediately mute it again).
+let autoUnmutedAt = 0;
 
 export function PromoVideo() {
   // Sharp 1080p (12 MB) when the video is shown wide or on a high-density screen; 720p (3 MB) on small phones.
@@ -21,9 +24,12 @@ export function PromoVideo() {
 
     const unmuteOnFirstInteraction = () => {
       const unmute = () => {
+        // A touch that was really a scroll isn't an interaction: keep waiting for a real tap.
+        if (navigator.userActivation && !navigator.userActivation.isActive) return;
         ACTIVATION_EVENTS.forEach((e) => document.removeEventListener(e, unmute, true));
         if (chosenMute) return;
         v.muted = false;
+        autoUnmutedAt = Date.now();
         setMuted(false);
         if (v.paused && isVisible) v.play().catch(() => {});
       };
@@ -62,6 +68,8 @@ export function PromoVideo() {
   const toggleSound = () => {
     const v = document.getElementById(VIDEO_ID) as HTMLVideoElement | null;
     if (!v) return;
+    // This same tap already turned the sound on: leave it on.
+    if (Date.now() - autoUnmutedAt < 600) return;
     const next = !v.muted;
     chosenMute = next;
     v.muted = next;
