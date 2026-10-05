@@ -41,3 +41,6 @@ yarn-error.*
 /android
 
 .env
+
+# Local tools (e.g. the cloudflared tunnel binary)
+cloudflared
