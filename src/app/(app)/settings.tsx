@@ -24,6 +24,7 @@ export default function Settings() {
   const items: { icon: IconName; label: string; href: Href; badge?: { label: string; tone: 'gray' | 'yellow' | 'green' | 'red' } }[] = [
     { icon: 'shield-checkmark-outline', label: 'Student verification', href: '/verify', badge: VERIFY[me.verification_status] },
     { icon: 'person-outline', label: 'Edit profile', href: '/edit-profile' },
+    { icon: 'key-outline', label: 'Change password', href: '/change-password' },
     { icon: 'wallet-outline', label: 'Wallet', href: '/wallet' },
     { icon: 'school-outline', label: me.tutor_status === 'approved' ? 'Tutor profile' : 'Become a tutor', href: '/become-tutor' },
     { icon: 'calendar-outline', label: 'My activity', href: '/activity' },

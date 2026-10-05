@@ -168,6 +168,9 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
             <Button title="Wallet" icon="wallet-outline" variant="outline" small style={{ flex: 1 }} onPress={() => router.push('/wallet')} />
             <Button title="" icon="settings-outline" variant="outline" small onPress={() => router.push('/settings')} />
           </Row>
+        ) : null}
+        {isMe ? (
+          <Button title="Change password" icon="key-outline" variant="ghost" small onPress={() => router.push('/change-password')} />
         ) : (
           <View style={{ gap: space(2) }}>
             {link === 'received' && (

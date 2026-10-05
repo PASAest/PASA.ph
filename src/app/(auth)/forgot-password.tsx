@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Platform } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { Button, Field, Text } from '@/components/ui';
 import { notify } from '@/lib/actions';
@@ -11,7 +12,9 @@ export default function ForgotPassword() {
   const submit = async () => {
     if (!email) return;
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase());
+    // The link signs them in on the website's "set a new password" screen (also works from the phone app's email).
+    const site = Platform.OS === 'web' ? window.location.origin : 'https://pasaph.vercel.app';
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: `${site}/change-password` });
     setLoading(false);
     if (error) return notify('Something went wrong', error.message);
     notify('Check your email', 'If that email has a PASA account, we sent a link to reset your password.');
