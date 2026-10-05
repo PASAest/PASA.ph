@@ -4,10 +4,8 @@ import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, font, space, themed } from '@/theme';
+import { centered, WIDTH } from '@/lib/layout';
 import { Text } from './ui';
-
-/** Widest a regular page's content gets (forms, settings, details). */
-const CONTENT_MAX_WIDTH = 680;
 
 type Props = {
   children: ReactNode;
@@ -80,7 +78,7 @@ const styles = themed(() => StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  column: { width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center' },
+  column: centered(WIDTH.form),
   headerBtn: { width: 64, justifyContent: 'center' },
   headerTitle: { flex: 1, textAlign: 'center', fontFamily: font.bold, fontSize: 17 },
   footer: {

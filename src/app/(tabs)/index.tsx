@@ -11,6 +11,7 @@ import { Avatar, Button, Empty, SkeletonList, Text, type IconName } from '@/comp
 import { requireVerified, useMe } from '@/lib/auth';
 import { tap } from '@/lib/haptics';
 import { fullName, peso } from '@/lib/format';
+import { centered, WIDTH } from '@/lib/layout';
 import { PRESENCE_LABEL, useStatuses } from '@/lib/presence';
 import { supabase } from '@/lib/supabase';
 import type { Post, PostType, Presence, Profile } from '@/lib/types';
@@ -118,7 +119,7 @@ export default function Home() {
         <FlatList
           data={tutors}
           keyExtractor={(t) => t.id}
-          contentContainerStyle={{ padding: space(4), gap: space(3) }}
+          contentContainerStyle={[centered(WIDTH.feed), { padding: space(4), gap: space(3) }]}
           ListHeaderComponent={header}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />}
           ListEmptyComponent={loaded ? <Empty icon="school-outline" title="No tutors yet" text="Be the first! Go to Profile → Become a tutor." /> : <SkeletonList count={3} />}
@@ -128,7 +129,7 @@ export default function Home() {
         <FlatList
           data={posts}
           keyExtractor={(p) => p.id}
-          contentContainerStyle={{ padding: space(4), gap: space(3) }}
+          contentContainerStyle={[centered(WIDTH.feed), { padding: space(4), gap: space(3) }]}
           ListHeaderComponent={header}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />}
           ListEmptyComponent={

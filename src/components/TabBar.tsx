@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { requireVerified, useMe } from '@/lib/auth';
 import { tap } from '@/lib/haptics';
 import { colors, elevation, font, themed } from '@/theme';
+import { centered } from '@/lib/layout';
 import { MenuSheet } from './MenuSheet';
 import { Text, type IconName } from './ui';
 
@@ -57,6 +58,7 @@ export function TabBar({ state, navigation }: Props) {
   return (
     <>
       <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+        <View style={styles.row}>
         {state.routes.slice(0, 2).map((r, i) => tabButton(r, i))}
         <View style={styles.tab}>
           <Pressable
@@ -72,6 +74,7 @@ export function TabBar({ state, navigation }: Props) {
           </Pressable>
         </View>
         {state.routes.slice(2).map((r, i) => tabButton(r, i + 2))}
+        </View>
       </View>
       <MenuSheet
         visible={menu}
@@ -92,13 +95,13 @@ export function TabBar({ state, navigation }: Props) {
 const styles = themed(() =>
   StyleSheet.create({
     bar: {
-      flexDirection: 'row',
-      alignItems: 'flex-end',
       backgroundColor: colors.surface,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.border,
       paddingTop: 6,
     },
+    // On wide screens the five buttons stay together in the middle instead of spreading across the screen.
+    row: { ...centered(560), flexDirection: 'row', alignItems: 'flex-end' },
     tab: { flex: 1, alignItems: 'center', gap: 2 },
     iconPill: { width: 54, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
     label: { fontSize: 11 },

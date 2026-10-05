@@ -7,6 +7,7 @@ import { StatusDot } from '@/components/StatusDot';
 import { Avatar, Empty, Loading, Text } from '@/components/ui';
 import { useMe } from '@/lib/auth';
 import { fullName, timeAgo } from '@/lib/format';
+import { centered, WIDTH } from '@/lib/layout';
 import { useStatuses } from '@/lib/presence';
 import { supabase } from '@/lib/supabase';
 import type { Conversation, Profile } from '@/lib/types';
@@ -105,6 +106,7 @@ export default function Messages() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <AppBar />
+      <View style={centered(WIDTH.feed)}>
       <Text variant="h2" style={{ paddingHorizontal: space(4), paddingBottom: space(2) }}>
         Messages
       </Text>
@@ -123,7 +125,9 @@ export default function Messages() {
           {!!search && <Ionicons name="close-circle" size={18} color={colors.muted} onPress={() => setSearch('')} accessibilityLabel="Clear search" />}
         </View>
       )}
+      </View>
       <FlatList
+        contentContainerStyle={centered(WIDTH.feed)}
         data={rows}
         keyExtractor={(r, i) => (r.kind === 'thread' ? r.thread.id : r.kind === 'message' ? r.message.id : `h${i}`)}
         keyboardShouldPersistTaps="handled"

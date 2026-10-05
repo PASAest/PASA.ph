@@ -13,7 +13,7 @@ import { useFocusLoad } from '@/lib/useFocusLoad';
 import { colors, font, space, themed } from '@/theme';
 import { ListingCard } from './ListingCard';
 import { MenuSheet } from './MenuSheet';
-import { useGridColumns } from './PhoneFrame';
+import { useGridColumns } from '@/lib/layout';
 import { StatusDot } from './StatusDot';
 import { Avatar, Badge, Button, Card, Empty, Loading, Row, Stars, Text } from './ui';
 
@@ -62,7 +62,7 @@ export function useProfileData(userId: string) {
 export function ProfileView({ data, reload }: { data: Data | null; reload: () => Promise<void> }) {
   const { me } = useMe();
   const [menu, setMenu] = useState(false);
-  const cols = useGridColumns();
+  const cols = Math.min(useGridColumns(), 3); // the profile is a narrower column
   const cardWidth = `${cols === 4 ? 23.5 : cols === 3 ? 31.5 : 48}%` as const;
   // Shown right away on tap, until the reload brings the saved state back.
   const [shownLink, setShownLink] = useState<Data['link'] | null>(null);

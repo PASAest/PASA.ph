@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChatMedia } from '@/components/ChatMedia';
 import { MenuSheet } from '@/components/MenuSheet';
@@ -10,6 +10,7 @@ import { Avatar, Row, Text } from '@/components/ui';
 import { confirm, notify } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
 import { fullName } from '@/lib/format';
+import { centered, WIDTH } from '@/lib/layout';
 import { checkText } from '@/lib/moderation';
 import { PRESENCE_LABEL, useStatuses } from '@/lib/presence';
 import { supabase } from '@/lib/supabase';
@@ -33,6 +34,7 @@ export default function Chat() {
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
   const [sendingMedia, setSendingMedia] = useState(false);
   const list = useRef<FlatList<Message>>(null);
+  const { width } = useWindowDimensions();
   const status = useStatuses([other?.id])[other?.id ?? ''];
 
   // Private attachments need short-lived signed links.
@@ -154,7 +156,7 @@ export default function Chat() {
         extraData={lastMineId}
         data={messages}
         keyExtractor={(m) => m.id}
-        contentContainerStyle={{ padding: space(4), gap: 6 }}
+        contentContainerStyle={[centered(WIDTH.feed), { padding: space(4), gap: 6 }]}
         onContentSizeChange={() => list.current?.scrollToEnd({ animated: false })}
         ListHeaderComponent={
           <View style={styles.notice}>
@@ -197,7 +199,7 @@ export default function Chat() {
           <Text variant="muted">You can't message this person.</Text>
         </View>
       ) : (
-        <Row style={[styles.composer, { paddingBottom: insets.bottom + 10 }]}>
+        <Row style={[styles.composer, { paddingBottom: insets.bottom + 10, paddingHorizontal: Math.max(space(3), (width - WIDTH.feed) / 2) }]}>
           <Pressable onPress={sendMedia} disabled={sendingMedia} hitSlop={8} accessibilityLabel="Send a photo or video">
             {sendingMedia ? <ActivityIndicator color={colors.primary} /> : <Ionicons name="image-outline" size={26} color={colors.primary} />}
           </Pressable>

@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Logo } from '@/components/Logo';
 import { Button, Text } from '@/components/ui';
+import { centered } from '@/lib/layout';
 import { colors, font, space } from '@/theme';
 
 // 1 · Welcome: Sign Up on top, Log In below.
@@ -20,7 +21,7 @@ export default function Welcome() {
           Find a tutor, share what you know, and trade academic items with fellow college students in Santa Rosa.
         </Text>
       </View>
-      <View style={{ gap: space(3) }}>
+      <View style={[centered(440), { gap: space(3) }]}>
         <Button title="Sign Up" onPress={() => router.push('/sign-up')} />
         <Button title="Log In" variant="outline" onPress={() => router.push('/log-in')} />
       </View>

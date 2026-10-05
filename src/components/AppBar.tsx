@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { colors, font, space, themed } from '@/theme';
+import { centered, WIDTH } from '@/lib/layout';
 import { Logo } from './Logo';
 import { Text } from './ui';
 
@@ -15,6 +16,7 @@ export function AppBar({ action }: { action?: ReactNode }) {
   const unread = useUnreadCount();
   return (
     <View style={[styles.bar, { paddingTop: insets.top + 34 }]}>
+      <View style={styles.row}>
       <View style={styles.logo}>
         <Logo size={34} />
         <Text style={styles.word}>PASA</Text>
@@ -29,6 +31,7 @@ export function AppBar({ action }: { action?: ReactNode }) {
             </View>
           )}
         </Pressable>
+      </View>
       </View>
     </View>
   );
@@ -63,13 +66,11 @@ function useUnreadCount() {
 
 const styles = themed(() => StyleSheet.create({
   bar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: space(4),
     paddingBottom: space(4),
     backgroundColor: colors.bg,
   },
+  row: { ...centered(WIDTH.page), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   logo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   word: { fontFamily: font.black, fontSize: 22, color: colors.primaryDark, letterSpacing: 1 },
   dot: {

@@ -91,7 +91,9 @@ export default function Landing() {
   const styles = useMemo(() => makeStyles(P), [P]);
   useLandingTheme(mode);
   const wide = width >= 980;
-  const pad = wide ? 56 : 20;
+  // Tablets (iPad portrait and similar) get their own sizes between the phone and laptop layouts.
+  const tablet = !wide && width >= 700;
+  const pad = wide ? 56 : tablet ? 40 : 20;
 
   // The landing page is for browsers only. Inside the app (or the home-screen web app) go straight to the app.
   if (isInstalledApp()) {
@@ -179,11 +181,11 @@ export default function Landing() {
         <View style={[section, styles.hero, { flexDirection: wide ? 'row' : 'column' }]}>
           <View style={{ flex: 1, gap: 22, paddingTop: wide ? 30 : 10 }}>
             <Text style={styles.kicker}>For college students in Santa Rosa, Laguna</Text>
-            <Text style={[styles.h1, { fontSize: wide ? 62 : 44, lineHeight: wide ? 66 : 48 }]}>
+            <Text style={[styles.h1, { fontSize: wide ? 62 : tablet ? 56 : 44, lineHeight: wide ? 66 : tablet ? 60 : 48 }]}>
               Pass the subject.{'\n'}Pass on the book.
             </Text>
-            <Text style={{ fontFamily: H7, fontSize: wide ? 26 : 21, color: P.ink }}>
-              Turn Potential Into <Text style={{ fontFamily: H7, fontSize: wide ? 26 : 21, color: INK_ON_LIGHT, backgroundColor: P.marker, paddingHorizontal: 4 }}>PASAbilities</Text>.
+            <Text style={{ fontFamily: H7, fontSize: wide ? 26 : tablet ? 24 : 21, color: P.ink }}>
+              Turn Potential Into <Text style={{ fontFamily: H7, fontSize: wide ? 26 : tablet ? 24 : 21, color: INK_ON_LIGHT, backgroundColor: P.marker, paddingHorizontal: 4 }}>PASAbilities</Text>.
             </Text>
             <Text style={styles.lead}>
               PASA is where students tutor students and trade the stuff school makes you buy. Book a tutor for an online session, sell or rent your old books and calculators, and pay safely with GCash or Maya.
@@ -203,18 +205,18 @@ export default function Landing() {
             </View>
             <StoreBadges />
           </View>
-          <View style={wide ? { width: 520, height: 560 } : { width: '100%', maxWidth: 420, height: 720, alignSelf: 'center' }}>
-            <Board wide={wide} />
+          <View style={wide ? { width: 520, height: 560 } : tablet ? { width: 520, height: 560, alignSelf: 'center' } : { width: '100%', maxWidth: 420, height: 720, alignSelf: 'center' }}>
+            <Board wide={wide || tablet} />
           </View>
         </View>
 
         {/* Numbers */}
         <View style={[section, { marginTop: wide ? 40 : 30 }]}>
           <View style={[styles.stats, { flexDirection: 'row', flexWrap: 'wrap' }]}>
-            <Stat wide={wide} value={SCHOOL_NAMES.length} label="colleges in Santa Rosa" first />
-            <Stat wide={wide} value={PROGRAMS.length - 3} suffix="+" label="programs to choose from" />
-            <Stat wide={wide} value={SUBJECTS.length} suffix="+" label="subjects you can learn or teach" first={!wide} />
-            <Stat wide={wide} value={CATEGORIES.length} label="kinds of academic items" />
+            <Stat wide={wide || tablet} value={SCHOOL_NAMES.length} label="colleges in Santa Rosa" first />
+            <Stat wide={wide || tablet} value={PROGRAMS.length - 3} suffix="+" label="programs to choose from" />
+            <Stat wide={wide || tablet} value={SUBJECTS.length} suffix="+" label="subjects you can learn or teach" first={!(wide || tablet)} />
+            <Stat wide={wide || tablet} value={CATEGORIES.length} label="kinds of academic items" />
           </View>
         </View>
 
@@ -231,9 +233,9 @@ export default function Landing() {
         <View onLayout={(e) => setAnchor('how', e)} style={[section, { marginTop: 110 }]}>
           <Reveal distance={18}>
             <Text style={styles.label}>How it works</Text>
-            <Text style={[styles.h2, { fontSize: wide ? 46 : 32, maxWidth: 760 }]}>Whether you need help or you can give it.</Text>
+            <Text style={[styles.h2, { fontSize: wide ? 46 : tablet ? 41 : 32, maxWidth: 760 }]}>Whether you need help or you can give it.</Text>
           </Reveal>
-          <View style={{ flexDirection: wide ? 'row' : 'column', gap: wide ? 60 : 36, marginTop: 40 }}>
+          <View style={{ flexDirection: wide || tablet ? 'row' : 'column', gap: wide ? 60 : 36, marginTop: 40 }}>
             <Steps
               title="If you need help"
               steps={[
@@ -257,7 +259,7 @@ export default function Landing() {
         <View onLayout={(e) => setAnchor('tutors', e)} style={[section, styles.split, { flexDirection: wide ? 'row' : 'column' }]}>
           <Reveal distance={18} style={{ flex: 1 }}>
             <Text style={styles.label}>Tutors</Text>
-            <Text style={[styles.h2, { fontSize: wide ? 42 : 30 }]}>Learn from someone who just passed it.</Text>
+            <Text style={[styles.h2, { fontSize: wide ? 42 : tablet ? 38 : 30 }]}>Learn from someone who just passed it.</Text>
             <Text style={[styles.body, { marginTop: 16 }]}>
               Tutors on PASA are students from schools around Santa Rosa who did well in the subject you’re taking now. Every tutor is reviewed by the PASA team, and every session is rated.
             </Text>
@@ -276,7 +278,7 @@ export default function Landing() {
         <View onLayout={(e) => setAnchor('assets', e)} style={[section, styles.split, { flexDirection: wide ? 'row-reverse' : 'column' }]}>
           <Reveal distance={18} style={{ flex: 1 }}>
             <Text style={styles.label}>Assets</Text>
-            <Text style={[styles.h2, { fontSize: wide ? 42 : 30 }]}>The calculator you needed for one sem, someone else needs next sem.</Text>
+            <Text style={[styles.h2, { fontSize: wide ? 42 : tablet ? 38 : 30 }]}>The calculator you needed for one sem, someone else needs next sem.</Text>
             <Text style={[styles.body, { marginTop: 16 }]}>
               Sell or rent out books, calculators, lab gowns, drafting sets and uniforms to students nearby. Rentals come with a refundable deposit, and delivery is arranged between you in chat.
             </Text>
@@ -296,7 +298,7 @@ export default function Landing() {
         <View style={[section, { marginTop: 110 }]}>
           <Reveal distance={18}>
             <Text style={styles.label}>Payments</Text>
-            <Text style={[styles.h2, { fontSize: wide ? 42 : 30, maxWidth: 760 }]}>Nobody gets paid until you say it went well.</Text>
+            <Text style={[styles.h2, { fontSize: wide ? 42 : tablet ? 38 : 30, maxWidth: 760 }]}>Nobody gets paid until you say it went well.</Text>
           </Reveal>
           <Reveal distance={18} delay={100}>
             <View style={[styles.flow, { flexDirection: wide ? 'row' : 'column' }]}>
@@ -325,7 +327,7 @@ export default function Landing() {
         <View style={[section, styles.split, { flexDirection: wide ? 'row' : 'column', alignItems: 'flex-start' }]}>
           <Reveal distance={18} style={{ flex: 1 }}>
             <Text style={styles.label}>Safety</Text>
-            <Text style={[styles.h2, { fontSize: wide ? 36 : 28 }]}>Built for students, checked by people.</Text>
+            <Text style={[styles.h2, { fontSize: wide ? 36 : tablet ? 33 : 28 }]}>Built for students, checked by people.</Text>
             <View style={{ gap: 14, marginTop: 22 }}>
               {[
                 'Everyone is verified with a school ID and COR.',
@@ -358,7 +360,7 @@ export default function Landing() {
         <View style={[section, { marginTop: 110 }]}>
           <Reveal distance={18}>
             <Text style={styles.label}>PASA Plus</Text>
-            <Text style={[styles.h2, { fontSize: wide ? 40 : 30, maxWidth: 760 }]}>For tutors and sellers who want to be seen first.</Text>
+            <Text style={[styles.h2, { fontSize: wide ? 40 : tablet ? 36 : 30, maxWidth: 760 }]}>For tutors and sellers who want to be seen first.</Text>
             <Text style={[styles.body, { marginTop: 12, maxWidth: 680 }]}>
               {settings.plus_boosts} boosts a month to pin your posts and listings on top, a service fee that’s {settings.plus_discount} points lower, and a Plus badge. Your first month is free.
             </Text>
@@ -386,7 +388,7 @@ export default function Landing() {
         {/* FAQ */}
         <View onLayout={(e) => setAnchor('faq', e)} style={[section, { marginTop: 110 }]}>
           <Reveal distance={18}>
-            <Text style={[styles.h2, { fontSize: wide ? 40 : 30 }]}>Questions</Text>
+            <Text style={[styles.h2, { fontSize: wide ? 40 : tablet ? 36 : 30 }]}>Questions</Text>
           </Reveal>
           <View style={{ marginTop: 20, borderTopWidth: 1, borderTopColor: P.rule }}>
             {FAQ.map(([q, a]) => (
@@ -399,7 +401,7 @@ export default function Landing() {
         <View style={[section, { marginTop: 110 }]}>
           <View style={[styles.closing, { flexDirection: wide ? 'row' : 'column', alignItems: wide ? 'center' : 'flex-start' }]}>
             <View style={{ flex: 1, gap: 10 }}>
-              <Text style={[styles.h2, { color: '#fff', fontSize: wide ? 40 : 30 }]}>Your next sem starts here.</Text>
+              <Text style={[styles.h2, { color: '#fff', fontSize: wide ? 40 : tablet ? 36 : 30 }]}>Your next sem starts here.</Text>
               <Text style={{ color: '#C6D6E3', fontSize: 17, lineHeight: 26 }}>Free to join for college students in Santa Rosa, Laguna.</Text>
               <View style={{ marginTop: 10 }}>
                 <StoreBadges />

@@ -7,8 +7,8 @@ import { CategoryDropdown } from '@/components/CategoryDropdown';
 import { ListingCard } from '@/components/ListingCard';
 import { Button, Empty, SkeletonList } from '@/components/ui';
 import { FilterDropdown, type FilterOption } from '@/components/FilterDropdown';
-import { useGridColumns } from '@/components/PhoneFrame';
 import { useMe } from '@/lib/auth';
+import { centered, useGridColumns, WIDTH } from '@/lib/layout';
 import { supabase } from '@/lib/supabase';
 import type { Listing } from '@/lib/types';
 import { useFocusLoad } from '@/lib/useFocusLoad';
@@ -75,7 +75,7 @@ export default function Assets() {
           </Pressable>
         }
       />
-      <View style={{ paddingHorizontal: space(4), gap: space(3), paddingBottom: space(2) }}>
+      <View style={[centered(WIDTH.page), { paddingHorizontal: space(4), gap: space(3), paddingBottom: space(2) }]}>
         <View style={styles.search}>
           <Ionicons name="search" size={18} color={colors.muted} />
           <TextInput
@@ -99,7 +99,7 @@ export default function Assets() {
         keyExtractor={(l) => l.id}
         numColumns={cols}
         columnWrapperStyle={{ gap: space(3) }}
-        contentContainerStyle={{ padding: space(4), paddingTop: space(2), gap: space(3) }}
+        contentContainerStyle={[centered(WIDTH.page), { padding: space(4), paddingTop: space(2), gap: space(3) }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />}
         ListEmptyComponent={
           loaded ? (
