@@ -8,7 +8,7 @@ import { PromoVideo } from '@/components/landing/PromoVideo';
 import { StoreBadges } from '@/components/landing/StoreBadges';
 import { Logo } from '@/components/Logo';
 import { Loading, Text, type IconName } from '@/components/ui';
-import { ANDROID_APK_URL, CATEGORIES, CONTACT_EMAIL, FACEBOOK_URL, PROGRAMS, SCHOOLS, SUBJECTS } from '@/config';
+import { CATEGORIES, CONTACT_EMAIL, FACEBOOK_URL, PROGRAMS, SCHOOLS, SUBJECTS } from '@/config';
 import { isInstalledApp } from '@/lib/appMode';
 import { useAuth } from '@/lib/auth';
 import { peso } from '@/lib/format';
@@ -196,12 +196,6 @@ export default function Landing() {
                 <Text style={{ color: P.blue, fontFamily: font.bold, fontSize: 16 }}>See how it works</Text>
                 <Ionicons name="arrow-down" size={16} color={P.blue} />
               </Pressable>
-              {!!ANDROID_APK_URL && (
-                <Pressable onPress={() => Linking.openURL(ANDROID_APK_URL)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="logo-android" size={18} color={P.green} />
-                  <Text style={{ color: P.green, fontFamily: font.bold, fontSize: 16 }}>Android app</Text>
-                </Pressable>
-              )}
             </View>
             <StoreBadges />
           </View>

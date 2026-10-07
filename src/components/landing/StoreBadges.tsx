@@ -1,14 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { APP_STORE_URL, PLAY_STORE_URL } from '@/config';
+import { ANDROID_APK_URL, APP_STORE_URL, PLAY_STORE_URL } from '@/config';
 import { font } from '@/theme';
 
-/** "Get it on Google Play" / "Download on the App Store" badges that open the stores. */
+/**
+ * "Get it on Google Play" / "Download on the App Store" badges. Until PASA is on Google Play, the Google Play badge
+ * downloads the Android app (APK) directly.
+ */
 export function StoreBadges() {
   return (
     <View style={styles.row}>
-      <Badge url={PLAY_STORE_URL} label="Get it on Google Play" top="GET IT ON" bottom="Google Play" icon={<PlayIcon />} />
+      <Badge url={ANDROID_APK_URL || PLAY_STORE_URL} label="Get it on Google Play" top="GET IT ON" bottom="Google Play" icon={<PlayIcon />} />
       <Badge url={APP_STORE_URL} label="Download on the App Store" top="Download on the" bottom="App Store" icon={<Ionicons name="logo-apple" size={30} color="#fff" />} />
     </View>
   );
