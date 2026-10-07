@@ -18,7 +18,10 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.pasa.campus"
+      "package": "com.pasa.campus",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -55,6 +58,12 @@
     "scheme": "pasa",
     "experiments": {
       "typedRoutes": false
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "23e2e3f3-7c4a-4de7-9770-95a8f77e465d"
+      }
     }
   }
 }
