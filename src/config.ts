@@ -103,7 +103,7 @@ export const DELIVERY_NOTE = 'Delivery is by internal arrangement. Agree on how 
 // Landing page links. Fill these in once the group creates them (business email, Facebook page, APK link).
 export const CONTACT_EMAIL = '';
 export const FACEBOOK_URL = '';
-export const ANDROID_APK_URL = 'https://expo.dev/artifacts/eas/VZyPOAlZvX5SYDetUL9FlaAIdUys6O4ceY5aXxiqCyM.apk';
+export const ANDROID_APK_URL = 'https://expo.dev/artifacts/eas/hE0h1mNmTYPfVY0db2sHJLVzBoeGPNytUC17xrTt1sg.apk';
 // Store badges on the landing page. PASA isn't listed yet: the Google Play badge downloads ANDROID_APK_URL while it's set,
 // and the App Store badge opens the App Store itself.
 // Swap in the app's own store pages once it's published.
