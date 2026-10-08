@@ -103,7 +103,8 @@ const styles = themed(() =>
     // On wide screens the five buttons stay together in the middle instead of spreading across the screen.
     row: { ...centered(560), flexDirection: 'row', alignItems: 'flex-end' },
     tab: { flex: 1, alignItems: 'center', gap: 2 },
-    iconPill: { width: 54, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+    // overflow hidden makes Android clip the highlight to its rounded shape, like on iPhone
+    iconPill: { width: 54, height: 30, borderRadius: 15, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
     label: { fontSize: 11 },
     create: {
       width: 56,

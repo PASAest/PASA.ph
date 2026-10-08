@@ -9,13 +9,14 @@ import { Avatar, Button, Card, Divider, Field, type IconName, Loading, Row, Text
 import { CANCEL_CUTOFF_MIN, PLATFORMS } from '@/config';
 import { notify } from '@/lib/actions';
 import { requireVerified, useMe } from '@/lib/auth';
-import { fullName, peso } from '@/lib/format';
+import { peso } from '@/lib/format';
 import { checkText } from '@/lib/moderation';
 import { serviceFee, useSettings } from '@/lib/settings';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/lib/toast';
 import type { Profile } from '@/lib/types';
 import { colors, font } from '@/theme';
+import { Name } from '@/components/Name';
 
 const DURATIONS = [60, 90, 120, 180];
 const durationLabel = (m: number) => (m === 60 ? '1 hour' : `${m / 60} hours`);
@@ -100,7 +101,7 @@ export default function BookTutor() {
         <Row gap={12}>
           <Avatar profile={tutor} size={50} />
           <View style={{ flex: 1 }}>
-            <Text variant="title">{fullName(tutor)}</Text>
+            <Name profile={tutor} />
             <Text variant="muted">
               {peso(tutor.tutor_rate)}/hr · Online
             </Text>

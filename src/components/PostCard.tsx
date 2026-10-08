@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { fullName, peso, timeAgo, yearLabel } from '@/lib/format';
+import { peso, timeAgo, yearLabel } from '@/lib/format';
 import type { Post } from '@/lib/types';
 import { colors, space, themed } from '@/theme';
 import { Avatar, Badge, Card, Row, Text } from './ui';
+import { Name } from './Name';
 
 export const POST_TYPES = {
   need_tutor: { label: 'Needs a tutor', tone: 'yellow', icon: 'help-buoy-outline' },
@@ -23,7 +24,7 @@ export function PostCard({ post, full }: { post: Post; full?: boolean }) {
           <Avatar profile={post.author} size={42} />
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text variant="label">{fullName(post.author)}</Text>
+          <Name profile={post.author} variant="label" />
           <Text variant="muted" style={{ fontSize: 12 }}>
             {post.author ? `${yearLabel(post.author.year_level)} · ${post.author.program}` : ''} · {timeAgo(post.created_at)}
           </Text>

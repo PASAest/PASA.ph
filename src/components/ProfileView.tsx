@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { confirm, notify, openChat } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
 import { toast } from '@/lib/toast';
-import { fullName, isPlus, peso, shortDate, yearLabel } from '@/lib/format';
+import { isPlus, peso, shortDate, yearLabel } from '@/lib/format';
 import { PRESENCE_LABEL, useStatuses } from '@/lib/presence';
 import { supabase } from '@/lib/supabase';
 import type { Listing, Profile, Rating, Review } from '@/lib/types';
@@ -16,6 +16,7 @@ import { MenuSheet } from './MenuSheet';
 import { useGridColumns } from '@/lib/layout';
 import { StatusDot } from './StatusDot';
 import { Avatar, Badge, Button, Card, Empty, Loading, Row, Stars, Text } from './ui';
+import { Name } from './Name';
 
 type Data = {
   profile: Profile;
@@ -135,9 +136,7 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
             </View>
             <StatusDot status={statuses[p.id]} size={20} />
           </View>
-          <Text variant="h2" style={{ textAlign: 'center' }}>
-            {fullName(p)}
-          </Text>
+          <Name profile={p} variant="h2" style={{ textAlign: 'center' }} rowStyle={{ justifyContent: 'center' }} />
           <Text variant="muted" style={{ textAlign: 'center' }}>
             {yearLabel(p.year_level)} · {p.program}
           </Text>
@@ -168,9 +167,6 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
             <Button title="Wallet" icon="wallet-outline" variant="outline" small style={{ flex: 1 }} onPress={() => router.push('/wallet')} />
             <Button title="" icon="settings-outline" variant="outline" small onPress={() => router.push('/settings')} />
           </Row>
-        ) : null}
-        {isMe ? (
-          <Button title="Change password" icon="key-outline" variant="ghost" small onPress={() => router.push('/change-password')} />
         ) : (
           <View style={{ gap: space(2) }}>
             {link === 'received' && (
@@ -220,9 +216,7 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
           <View key={r.id} style={styles.review}>
             <Row>
               <Avatar profile={r.reviewer} size={28} />
-              <Text variant="label" style={{ flex: 1 }}>
-                {fullName(r.reviewer)}
-              </Text>
+              <Name profile={r.reviewer} variant="label" rowStyle={{ flex: 1 }} />
               <Stars value={r.stars} size={12} />
             </Row>
             {!!r.comment && <Text variant="muted">{r.comment}</Text>}

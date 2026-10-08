@@ -9,7 +9,6 @@ import { StatusDot } from '@/components/StatusDot';
 import { Avatar, Row, Text } from '@/components/ui';
 import { confirm, notify } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
-import { fullName } from '@/lib/format';
 import { centered, WIDTH } from '@/lib/layout';
 import { checkText } from '@/lib/moderation';
 import { PRESENCE_LABEL, useStatuses } from '@/lib/presence';
@@ -17,6 +16,7 @@ import { supabase } from '@/lib/supabase';
 import type { Conversation, Message, Profile } from '@/lib/types';
 import { pickMedia, signedUrls, uploadChatMedia } from '@/lib/upload';
 import { colors, font, radius, space, themed } from '@/theme';
+import { Name } from '@/components/Name';
 
 // 3.3 · Chat thread (live via Supabase Realtime) with photo and video attachments
 /** Where my message is: saved, received by their app, or opened by them. */
@@ -139,7 +139,7 @@ export default function Chat() {
             <StatusDot status={status} />
           </View>
           <View>
-            <Text variant="title">{fullName(other)}</Text>
+            <Name profile={other} />
             <Text variant="muted" style={{ fontSize: 12 }}>
               {status ? `${PRESENCE_LABEL[status]} · ` : ''}
               {other?.is_tutor ? 'Tutor' : other?.program}

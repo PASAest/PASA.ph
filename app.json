@@ -21,7 +21,10 @@
       "package": "com.pasa.campus",
       "permissions": [
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -64,6 +67,9 @@
       "eas": {
         "projectId": "23e2e3f3-7c4a-4de7-9770-95a8f77e465d"
       }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/23e2e3f3-7c4a-4de7-9770-95a8f77e465d"
     }
   }
 }

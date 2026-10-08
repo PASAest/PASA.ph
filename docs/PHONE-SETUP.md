@@ -23,7 +23,11 @@ Website and web app: **https://pasaph.vercel.app** (admin panel at `/admin`).
    ```
    Accept the defaults (including "Generate a new Android Keystore"). About 10–20 minutes; you get a download link.
 3. Put the link in `ANDROID_APK_URL` in `src/config.ts` so the landing page shows an "Android app" link.
-4. **Rebuild after app changes.** The APK keeps the version it was built with; the website updates on its own.
+4. **Updating the Android app.** Phones with the new APK update **without reinstalling**: publish an update, and the app picks it up the next time it's opened (it may take two opens).
+   ```bash
+   npx eas-cli@latest update --channel preview --environment preview --message "What changed"
+   ```
+   Updates only carry app screens, features and fixes. **Rebuild the APK** (step 2) for a new app icon or name, new permissions, a new phone feature, or when you bump `version` in `app.json`. The website updates on its own after each push.
 
 ### C. Website (iPhone + any browser)
 - Vercel deploys automatically from GitHub (`PASAest/PASA.ph`, project **pasa.ph**) a few minutes after each push. Nothing to run by hand.

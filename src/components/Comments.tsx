@@ -4,12 +4,13 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { notify } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
-import { fullName, timeAgo } from '@/lib/format';
+import { timeAgo } from '@/lib/format';
 import { checkText } from '@/lib/moderation';
 import { supabase } from '@/lib/supabase';
 import type { Comment } from '@/lib/types';
 import { colors, font, radius, space, themed } from '@/theme';
 import { Avatar, Row, Text } from './ui';
+import { Name } from './Name';
 
 /** Comment thread for a post or a listing. */
 export function Comments({ comments, target, onPosted }: { comments: Comment[]; target: { post_id: string } | { listing_id: string }; onPosted: () => void }) {
@@ -39,9 +40,10 @@ export function Comments({ comments, target, onPosted }: { comments: Comment[]; 
             <Avatar profile={c.author} size={34} />
           </Pressable>
           <View style={styles.bubble}>
-            <Text style={{ fontFamily: font.bold, fontSize: 13.5 }}>
-              {fullName(c.author)} <Text variant="muted" style={{ fontSize: 12 }}>· {timeAgo(c.created_at)}</Text>
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Name profile={c.author} variant="body" style={{ fontFamily: font.bold, fontSize: 13.5 }} />
+              <Text variant="muted" style={{ fontSize: 12 }}>· {timeAgo(c.created_at)}</Text>
+            </View>
             <Text>{c.body}</Text>
           </View>
         </Row>

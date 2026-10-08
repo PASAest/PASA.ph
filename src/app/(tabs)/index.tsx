@@ -10,13 +10,14 @@ import { VerifyBanner } from '@/components/VerifyBanner';
 import { Avatar, Button, Empty, SkeletonList, Text, type IconName } from '@/components/ui';
 import { requireVerified, useMe } from '@/lib/auth';
 import { tap } from '@/lib/haptics';
-import { fullName, peso } from '@/lib/format';
+import { peso } from '@/lib/format';
 import { centered, WIDTH } from '@/lib/layout';
 import { PRESENCE_LABEL, useStatuses } from '@/lib/presence';
 import { supabase } from '@/lib/supabase';
 import type { Post, PostType, Presence, Profile } from '@/lib/types';
 import { useFocusLoad } from '@/lib/useFocusLoad';
 import { colors, elevation, font, radius, space, themed } from '@/theme';
+import { Name } from '@/components/Name';
 
 type Filter = 'all' | PostType | 'tutors';
 const FILTERS: { key: Filter; label: string }[] = [
@@ -86,7 +87,7 @@ export default function Home() {
           What do you need help with?
         </Text>
         <View style={styles.composerBtn}>
-          <Ionicons name="create-outline" size={18} color={colors.white} />
+          <Ionicons name="create-outline" size={18} color={colors.white} style={{ includeFontPadding: false, textAlignVertical: 'center' }} />
         </View>
       </Pressable>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
@@ -180,7 +181,7 @@ function TutorRow({ tutor, status }: { tutor: Profile; status?: Presence }) {
         <StatusDot status={status} size={14} />
       </View>
       <View style={{ flex: 1, gap: 3 }}>
-        <Text variant="title">{fullName(tutor)}</Text>
+        <Name profile={tutor} />
         <Text variant="muted" numberOfLines={1}>
           {tutor.tutor_subjects.join(' · ')}
         </Text>

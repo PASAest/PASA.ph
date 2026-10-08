@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabase';
 import type { Conversation, Profile } from '@/lib/types';
 import { useFocusLoad } from '@/lib/useFocusLoad';
 import { colors, font, radius, space, themed } from '@/theme';
+import { Name } from '@/components/Name';
 
 type Thread = Conversation & { other?: Profile };
 type Found = { id: string; conversation_id: string; sender_id: string; body: string; created_at: string };
@@ -152,7 +153,7 @@ export default function Messages() {
               <Pressable onPress={() => router.push(`/chat/${m.conversation_id}`)} style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.brandSoft }]}>
                 <Avatar profile={item.thread?.other} size={50} />
                 <View style={{ flex: 1, gap: 2 }}>
-                  <Text variant="title">{fullName(item.thread?.other)}</Text>
+                  <Name profile={item.thread?.other} />
                   <Highlight text={(mine ? 'You: ' : '') + excerpt(m.body, q)} q={q} muted />
                 </View>
                 <Text variant="muted" style={{ fontSize: 12 }}>

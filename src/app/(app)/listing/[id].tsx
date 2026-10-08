@@ -10,11 +10,12 @@ import { Avatar, Badge, Button, Card, Loading, Row, Text } from '@/components/ui
 import { confirm, openChat } from '@/lib/actions';
 import { categoryOf, DELIVERY_NOTE } from '@/config';
 import { requireVerified, useMe } from '@/lib/auth';
-import { fullName, peso, yearLabel } from '@/lib/format';
+import { peso, yearLabel } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
 import type { Comment, Listing } from '@/lib/types';
 import { useFocusLoad } from '@/lib/useFocusLoad';
 import { colors, elevation, font, radius, space } from '@/theme';
+import { Name } from '@/components/Name';
 
 // 3.2 · Item detail: photo, price, title, author, description, seller, comments
 export default function ListingDetail() {
@@ -137,7 +138,7 @@ export default function ListingDetail() {
               <Text variant="muted" style={{ fontSize: 12 }}>
                 Sold by
               </Text>
-              <Text variant="title">{fullName(listing.seller)}</Text>
+              <Name profile={listing.seller} />
               <Text variant="muted">{listing.seller ? `${yearLabel(listing.seller.year_level)} · ${listing.seller.program}` : ''}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.muted} />

@@ -72,8 +72,8 @@ export function Button({ title, onPress, variant = 'primary', icon, loading, dis
         <ActivityIndicator color={v.fg} />
       ) : (
         <>
-          {icon && <Ionicons name={icon} size={small ? 15 : 18} color={v.fg} />}
-          <RNText style={[styles.buttonText, small && { fontSize: 13.5 }, { color: v.fg }]}>{title}</RNText>
+          {icon && <Ionicons name={icon} size={small ? 15 : 18} color={v.fg} style={styles.centeredIcon} />}
+          {!!title && <RNText style={[styles.buttonText, small && { fontSize: 13.5 }, { color: v.fg }]}>{title}</RNText>}
         </>
       )}
     </Pressable>
@@ -312,6 +312,8 @@ const styles = themed(() => StyleSheet.create({
     gap: 8,
   },
   buttonSmall: { minHeight: 38, paddingHorizontal: 14 },
+  // Android adds extra space above a glyph; turning it off keeps icons truly centered
+  centeredIcon: { includeFontPadding: false, textAlignVertical: 'center' } as TextStyle,
   buttonText: { fontFamily: font.bold, fontSize: 16 },
   field: {
     flexDirection: 'row',

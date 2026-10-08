@@ -1,8 +1,8 @@
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
 
-// Small physical feedback on phones; does nothing on the web.
-const on = Platform.OS === 'ios' || Platform.OS === 'android';
+// Small physical feedback on iPhones. Android phones buzz on every tap, so there it's turned off; the web has none.
+const on = Platform.OS === 'ios';
 
 export const tap = () => {
   if (on) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
