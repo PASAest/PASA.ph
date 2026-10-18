@@ -7,7 +7,7 @@ import { Avatar, Badge, Button, Card, Chip, Empty, Field, Loading, Row, Text } f
 import { CANCEL_CUTOFF_MIN, isMeetingLink } from '@/config';
 import { confirm, notify, openChat } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
-import { dateTime, fullName, peso, shortDate } from '@/lib/format';
+import { dateTime, fullName, peso } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
 import type { Booking, BookingStatus, Order, Profile } from '@/lib/types';
 import { useFocusLoad } from '@/lib/useFocusLoad';
@@ -28,7 +28,7 @@ const BOOKING_STATUS: Record<BookingStatus, { label: string; tone: 'yellow' | 'b
 const ORDER_STATUS: Record<Order['status'], { label: string; tone: 'yellow' | 'blue' | 'green' | 'gray' | 'red' }> = {
   paid: { label: 'Paid · meet to hand over', tone: 'blue' },
   completed: { label: 'Completed', tone: 'green' },
-  returned: { label: 'Returned', tone: 'gray' },
+  returned: { label: 'Returned', tone: 'gray' }, // older rentals only
   cancelled: { label: 'Cancelled', tone: 'red' },
 };
 
@@ -80,7 +80,7 @@ export default function Activity() {
           bookings.map((b) => <BookingCard key={b.id} booking={b} me={me} reviewed={reviewed.has(b.id)} onChange={load} />)
         )
       ) : orders.length === 0 ? (
-        <Empty icon="bag-outline" title="No items yet" text="Books and calculators you buy, rent, or sell show up here." />
+        <Empty icon="bag-outline" title="No items yet" text="Books and calculators you buy or sell show up here." />
       ) : (
         orders.map((o) => <OrderCard key={o.id} order={o} me={me} reviewed={reviewed.has(o.id)} onChange={load} />)
       )}
@@ -229,9 +229,6 @@ function BookingCard({ booking: b, me, reviewed, onChange }: { booking: Booking;
 function OrderCard({ order: o, me, reviewed, onChange }: { order: Order; me: Profile; reviewed: boolean; onChange: () => void }) {
   const isSeller = o.seller_id === me.id;
   const other = isSeller ? o.buyer : o.seller;
-  const rent = o.kind === 'rent';
-  const now = useNow();
-  const overdue = rent && o.status === 'completed' && o.due_at && new Date(o.due_at).getTime() < now;
   const status = ORDER_STATUS[o.status];
 
   const update = async (status: Order['status']) => {
@@ -245,8 +242,8 @@ function OrderCard({ order: o, me, reviewed, onChange }: { order: Order; me: Pro
   return (
     <Card style={{ gap: 10 }}>
       <Row style={{ justifyContent: 'space-between' }}>
-        <Badge label={isSeller ? (rent ? 'Rented out' : 'Sold') : rent ? 'Renting' : 'Bought'} tone={isSeller ? 'green' : 'blue'} />
-        <Badge label={rent && o.status === 'completed' ? 'On loan' : status.label} tone={overdue ? 'red' : status.tone} />
+        <Badge label={isSeller ? 'Sold' : 'Bought'} tone={isSeller ? 'green' : 'blue'} />
+        <Badge label={status.label} tone={status.tone} />
       </Row>
       <Text variant="title" onPress={() => router.push(`/listing/${o.listing_id}`)}>
         {o.listing?.title}
@@ -259,18 +256,9 @@ function OrderCard({ order: o, me, reviewed, onChange }: { order: Order; me: Pro
       <Row>
         <Ionicons name="cash-outline" size={16} color={colors.muted} />
         <Text variant="muted">
-          {isSeller ? `You earn ${peso(o.amount)}` : `${peso(o.amount + o.fee + o.deposit)} total`}
-          {rent && o.deposit ? ` · ${peso(o.deposit)} deposit` : ''}
+          {isSeller ? `You earn ${peso(o.amount)}` : `${peso(o.amount + o.fee)} total`}
         </Text>
       </Row>
-      {rent && o.due_at && (
-        <Row>
-          <Ionicons name="calendar-outline" size={16} color={overdue ? colors.danger : colors.muted} />
-          <Text style={{ color: overdue ? colors.danger : colors.muted, fontFamily: overdue ? font.bold : font.regular }}>
-            {overdue ? 'Overdue! ' : ''}Return by {shortDate(o.due_at)}
-          </Text>
-        </Row>
-      )}
       <Row style={{ flexWrap: 'wrap' }}>
         {!isSeller && o.status === 'paid' && (
           <Button
@@ -282,17 +270,7 @@ function OrderCard({ order: o, me, reviewed, onChange }: { order: Order; me: Pro
             }}
           />
         )}
-        {isSeller && rent && o.status === 'completed' && (
-          <Button
-            title="Mark returned"
-            small
-            icon="return-down-back"
-            onPress={async () => {
-              if (await confirm('Item returned in good condition?', `The ${peso(o.deposit)} deposit goes back to ${other?.first_name}.`, 'Yes, returned')) update('returned');
-            }}
-          />
-        )}
-        {(o.status === 'completed' || o.status === 'returned') && !reviewed && other && (
+        {o.status === 'completed' && !reviewed && other && (
           <Button
             title={`Rate ${other.first_name}`}
             small

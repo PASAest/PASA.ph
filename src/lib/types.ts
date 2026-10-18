@@ -60,7 +60,7 @@ export type Listing = {
   id: string;
   seller_id: string;
   category: string;
-  mode: 'sale' | 'rent';
+  mode: 'sale' | 'rent'; // 'rent' only on older listings; new ones are always 'sale'
   title: string;
   book_author: string;
   description: string;
@@ -103,7 +103,7 @@ export type Order = {
   listing_id: string;
   buyer_id: string;
   seller_id: string;
-  kind: 'buy' | 'rent';
+  kind: 'buy' | 'rent'; // 'rent' only on older orders
   weeks: number;
   amount: number;
   deposit: number;

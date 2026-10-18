@@ -74,7 +74,7 @@ export default function Content() {
                   <Text style={{ fontFamily: font.bold }}>{l.title}</Text>
                   {'\n'}
                   <Text variant="muted" style={{ fontSize: 12.5 }}>
-                    {l.category === 'book' ? 'Book' : 'Calculator'} · {l.mode === 'rent' ? `${peso(l.price)}/week` : peso(l.price)}
+                    {l.category === 'book' ? 'Book' : 'Calculator'} · {peso(l.price)}
                     {listingFlag(l) ? ' · ⚠ matches banned terms' : ''}
                   </Text>
                 </Text>

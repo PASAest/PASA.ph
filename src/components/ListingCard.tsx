@@ -34,15 +34,11 @@ export function ListingPhoto({ listing, height }: { listing: Listing; height: nu
 export function ListingCard({ listing, favorite, onToggleFavorite }: { listing: Listing; favorite?: boolean; onToggleFavorite?: () => void }) {
   const status = LISTING_STATUS[listing.status];
   const boosted = listing.boosted_until && new Date(listing.boosted_until) > new Date();
-  const rent = listing.mode === 'rent';
   return (
     <Pressable onPress={() => router.push(`/listing/${listing.id}`)} style={({ pressed }) => [styles.card, pressed && { transform: [{ scale: 0.97 }] }]}>
       <View>
         <ListingPhoto listing={listing} height={128} />
         <View style={styles.tagRow}>
-          <View style={[styles.tag, { backgroundColor: rent ? colors.warning : colors.primary }]}>
-            <Text style={styles.tagText}>{rent ? 'RENT' : 'SALE'}</Text>
-          </View>
           {boosted && (
             <View style={[styles.tag, { backgroundColor: colors.warningSoft }]}>
               <Ionicons name="flash" size={10} color={colors.warning} />
@@ -72,7 +68,6 @@ export function ListingCard({ listing, favorite, onToggleFavorite }: { listing: 
       <View style={{ padding: 10, gap: 3 }}>
         <Text style={{ fontFamily: font.display, fontSize: 18, color: colors.text }}>
           {peso(listing.price)}
-          {rent && <Text variant="muted">/wk</Text>}
         </Text>
         <Text numberOfLines={2} style={{ fontFamily: font.semibold, fontSize: 13.5, lineHeight: 18, minHeight: 36 }}>
           {listing.title}

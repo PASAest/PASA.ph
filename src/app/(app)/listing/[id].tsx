@@ -40,7 +40,6 @@ export default function ListingDetail() {
   const mine = listing.seller_id === me.id;
   const status = LISTING_STATUS[listing.status];
   const available = listing.status === 'available';
-  const rent = listing.mode === 'rent';
 
   const menuItems: MenuItem[] = mine
     ? [
@@ -79,7 +78,7 @@ export default function ListingDetail() {
               onPress={() => openChat(listing.seller_id, `Hi! Is "${listing.title}" still available?`)}
             />
             <Button
-              title={available ? (rent ? 'Rent' : 'Buy') : status.label}
+              title={available ? 'Buy' : status.label}
               icon={available ? 'bag-check-outline' : undefined}
               disabled={!available}
               style={{ flex: 1 }}
@@ -118,14 +117,11 @@ export default function ListingDetail() {
       <View style={{ gap: 6 }}>
         <Text style={{ fontFamily: font.display, fontSize: 32, color: colors.text, letterSpacing: -0.5 }}>
           {peso(listing.price)}
-          {rent && <Text variant="muted"> / week</Text>}
         </Text>
-        {rent && listing.deposit > 0 && <Text variant="muted">+ {peso(listing.deposit)} refundable deposit</Text>}
         <Text variant="h2">{listing.title}</Text>
         {!!listing.book_author && <Text variant="muted">by {listing.book_author}</Text>}
         <Row style={{ flexWrap: 'wrap', marginTop: 4 }} gap={6}>
           <Badge label={status.label} tone={status.tone} />
-          <Badge label={rent ? 'For rent' : 'For sale'} tone="blue" />
           <Badge label={listing.condition} tone="gray" />
           <Badge label={categoryOf(listing.category).label} tone="gray" />
         </Row>

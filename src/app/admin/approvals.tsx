@@ -138,7 +138,7 @@ export default function Approvals() {
                 <View style={{ flex: 1, minWidth: 220, gap: 4 }}>
                   <Text variant="title">{l.title}</Text>
                   <Text variant="muted">
-                    {categoryOf(l.category).label} · {l.mode === 'rent' ? `${peso(l.price)}/week` : peso(l.price)} · by {fullName(l.seller)}
+                    {categoryOf(l.category).label} · {peso(l.price)} · by {fullName(l.seller)}
                   </Text>
                   {!!l.description && <Text>{l.description}</Text>}
                   {!!l.review_note && <Badge label={`Flagged: ${l.review_note}`} tone="yellow" icon="warning" />}

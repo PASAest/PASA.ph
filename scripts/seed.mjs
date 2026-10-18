@@ -156,29 +156,17 @@ await addListings(carlo.client, carlo.id, [
     seller_id: carlo.id, category: 'calculator', mode: 'sale', title: 'Casio fx-991ES Plus', condition: 'Like new', price: 650,
     meetup_spot: 'Cafeteria', description: 'Used for one semester only. Complete with cover. Allowed in board exams.',
   },
-  {
-    seller_id: carlo.id, category: 'book', mode: 'rent', title: 'Advanced Algebra, 4th Ed.', book_author: 'Sullivan', condition: 'Good',
-    price: 50, deposit: 300, meetup_spot: 'Main Library', description: 'Some highlights in chapters 1–3. Rent it for the sem!',
-  },
 ]);
 await addListings(miguel.client, miguel.id, [
-  {
-    seller_id: miguel.id, category: 'book', mode: 'rent', title: 'Intermediate Accounting Vol. 1', book_author: 'Valix, Peralta', condition: 'Good',
-    price: 60, deposit: 400, meetup_spot: 'Main Library', description: 'Latest edition. Clean pages, no writing inside.',
-  },
 ]);
 await addListings(bea.client, bea.id, [
   {
     seller_id: bea.id, category: 'book', mode: 'sale', title: 'Calculus: Early Transcendentals, 8th Ed.', book_author: 'Stewart', condition: 'Fair',
     price: 450, meetup_spot: 'Study Hall', description: 'Cover is a bit worn but all pages intact.',
   },
-  {
-    seller_id: bea.id, category: 'calculator', mode: 'rent', title: 'Casio fx-570EX ClassWiz', condition: 'Good',
-    price: 40, deposit: 500, meetup_spot: 'Study Hall', description: 'Rent for exam week. Deposit returned when you give it back.',
-  },
 ]);
 
-// More items so there's plenty to buy and rent in Assets.
+// More items so there's plenty to buy in Assets.
 const boosted = new Date(Date.now() + 3 * 86400000).toISOString();
 const extra = [
   await addListings(carlo.client, carlo.id, [
@@ -190,13 +178,10 @@ const extra = [
   await addListings(miguel.client, miguel.id, [
     { category: 'calculator', mode: 'sale', title: 'Casio fx-991EX ClassWiz', condition: 'Like new', price: 900, meetup_spot: 'Main Library', description: 'Upgraded to a newer model, so letting this go. Complete with box and cover.', boosted_until: boosted },
     { category: 'book', mode: 'sale', title: 'Cost Accounting: Principles and Procedures', book_author: 'Guerrero, Peralta', condition: 'Good', price: 420, meetup_spot: 'Main Library', description: 'Clean copy. Helpful for Cost Accounting 1 and 2.' },
-    { category: 'book', mode: 'rent', title: 'Basic Financial Accounting and Reporting', book_author: 'Ballada', condition: 'Good', price: 45, deposit: 300, meetup_spot: 'Main Library', description: 'Great for first-year BSA. Rent it for the whole sem.' },
   ]),
   await addListings(bea.client, bea.id, [
     { category: 'book', mode: 'sale', title: 'Elementary Statistics: A Step by Step Approach', book_author: 'Bluman', condition: 'Good', price: 500, meetup_spot: 'Study Hall', description: 'Used for STAT 101. Some highlights in chapters 2 to 5.' },
-    { category: 'book', mode: 'rent', title: 'Discrete Mathematics and Its Applications', book_author: 'Rosen', condition: 'Good', price: 70, deposit: 500, meetup_spot: 'Study Hall', description: 'Heavy but worth it for CS students. Rent weekly.' },
     { category: 'book', mode: 'sale', title: 'Physics for Scientists and Engineers', book_author: 'Serway, Jewett', condition: 'Fair', price: 600, meetup_spot: 'Study Hall', description: 'Spine is a bit loose but all pages are complete.' },
-    { category: 'calculator', mode: 'rent', title: 'Sharp EL-W516X', condition: 'Good', price: 35, deposit: 400, meetup_spot: 'Study Hall', description: 'Rent for exam week. Deposit returned when you give it back.' },
   ]),
   await addListings(andrea.client, andrea.id, [
     { category: 'book', mode: 'sale', title: 'Purposive Communication', condition: 'Like new', price: 150, meetup_spot: 'Cafeteria', description: 'Bought it but our prof gave us a PDF. Still wrapped in plastic.' },
@@ -208,8 +193,6 @@ const extra = [
   ]),
   await addListings(bea.client, bea.id, [
     { category: 'lab_equipment', mode: 'sale', title: 'Lab Gown (Medium)', condition: 'Like new', price: 280, description: 'Worn for one semester of Chem lab. No stains.' },
-    { category: 'drafting_tools', mode: 'rent', title: 'Drafting Set with T-square', condition: 'Good', price: 40, deposit: 300, description: 'Complete set: T-square, triangles, compass and protractor. Rent weekly for Engineering Drawing.' },
-    { category: 'gadget', mode: 'rent', title: 'Graphing Calculator TI-84 Plus', condition: 'Good', price: 80, deposit: 1500, description: 'For Calculus and Statistics. Rent weekly; deposit returned on return.' },
   ]),
   await addListings(andrea.client, andrea.id, [
     { category: 'school_supplies', mode: 'sale', title: 'Accounting Columnar Pads (2-, 4- and 8-column)', condition: 'Brand new', price: 90, description: 'Bought too many. Complete set of three pads.' },
@@ -254,19 +237,18 @@ await post('april', 1, 'need_tutor', 'Intermediate Accounting', 'Anyone free to 
 await post('chaelly', 3, 'need_tutor', 'Statistics', 'Need help with t-tests and ANOVA for our research paper. Can do a Zoom session this weekend!', 160);
 await post('michael', 4, 'offer_tutoring', 'Programming', 'Finals project stressing you out? I can help you debug Java, Python or web projects over screen share. Book me on PASA 💻', 180);
 await post('niamh', 6, 'offer_tutoring', 'Research Writing', 'Writing your RRL or methodology? I can check your draft and help with APA 7th citations. 1-hour online sessions.', 150);
-await post('leejhen', 9, 'general', '', 'Does anyone have a spare drafting set I can rent for Engineering Drawing? Mine broke 😭 Check Assets if you’re selling one!');
+await post('leejhen', 9, 'general', '', 'Does anyone have a spare drafting set for Engineering Drawing? Mine broke 😭 Check Assets if you’re selling one!');
 await post('mishi', 12, 'need_tutor', 'Mathematics in the Modern World', 'Help! Logic and set theory are confusing me. Looking for a patient tutor before the midterms.', 150);
 await post('geneva', 14, 'offer_tutoring', 'Auditing', 'BSA juniors: I’m opening Auditing and Taxation review sessions for the midterms. Board-exam-style drills, small groups welcome 📚', 200);
 await post('karen', 18, 'general', '', 'Selling my extra nursing scrubs and a stethoscope in Assets. Freshies, message me before you buy new ones!');
 await post('janna', 22, 'need_tutor', 'Programming', 'First time coding and loops are confusing me. Anyone who can explain for/while loops in Python? 🥲', 150);
-await post('mariekrystel', 26, 'general', '', 'Tip: you can rent books on PASA for the sem instead of buying. Saved ₱800 this term!');
+await post('mariekrystel', 26, 'general', '', 'Tip: check Assets before buying new books. I saved ₱800 this term buying secondhand!');
 await post('graziela', 30, 'offer_tutoring', 'Calculus', 'Calculus 1 and 2 tutoring: limits, derivatives, integrals. I give practice sets after every session. Online via Google Meet.', 160);
 
 const addListingsFor = (handle, rows) => (g[handle] ? addListings(g[handle].client, g[handle].id, rows) : 0);
 const groupItems = [
   await addListingsFor('april', [
     { category: 'book', mode: 'sale', title: 'Intermediate Accounting Vol. 2', book_author: 'Valix, Peralta', condition: 'Good', price: 450, description: 'Some yellow highlights but no writing. Great for ACCO 3.' },
-    { category: 'calculator', mode: 'rent', title: 'Casio fx-991ES Plus (Rent)', condition: 'Good', price: 35, deposit: 400, description: 'Rent for exam week. Deposit returned when you give it back.' },
   ]),
   await addListingsFor('chaelly', [
     { category: 'book', mode: 'sale', title: 'Psychology: Themes and Variations', book_author: 'Weiten', condition: 'Good', price: 550, description: 'Used for Intro to Psych. Clean pages, small dent on the cover.' },
@@ -274,7 +256,6 @@ const groupItems = [
   ]),
   await addListingsFor('michael', [
     { category: 'gadget', mode: 'sale', title: 'Logitech Wireless Mouse M185', condition: 'Like new', price: 350, description: 'Switched to a trackpad. Comes with the USB receiver.' },
-    { category: 'book', mode: 'rent', title: 'Head First Java, 3rd Ed.', book_author: 'Sierra, Bates', condition: 'Good', price: 50, deposit: 400, description: 'Best book for learning OOP. Rent it for the whole sem.' },
   ]),
   await addListingsFor('niamh', [
     { category: 'book', mode: 'sale', title: 'Purposive Communication (with workbook)', condition: 'Like new', price: 170, description: 'Workbook pages are still blank. GE requirement for all programs.' },
@@ -288,7 +269,6 @@ const groupItems = [
   ]),
   await addListingsFor('geneva', [
     { category: 'book', mode: 'sale', title: 'Auditing Theory', book_author: 'Salosagcol', condition: 'Good', price: 380, description: 'Board-exam reviewer. A few notes in the margins that actually help.' },
-    { category: 'book', mode: 'rent', title: 'Income Taxation', book_author: 'Valencia, Roxas', condition: 'Good', price: 45, deposit: 350, description: 'Latest TRAIN law edition. Rent weekly or for the sem.' },
   ]),
   await addListingsFor('karen', [
     { category: 'lab_equipment', mode: 'sale', title: 'Littmann Classic III Stethoscope', condition: 'Like new', price: 3500, description: 'Got a cardiology one, so selling this. Original box included.' },
@@ -302,7 +282,6 @@ const groupItems = [
     { category: 'school_supplies', mode: 'sale', title: 'Dotted Journal and Brush Pens', condition: 'Brand new', price: 220, description: 'Perfect for notes and planners. Still sealed.' },
   ]),
   await addListingsFor('graziela', [
-    { category: 'gadget', mode: 'rent', title: 'Casio fx-CG50 Graphing Calculator', condition: 'Like new', price: 90, deposit: 2000, description: 'Color graphing calculator for Calculus and Stats. Rent weekly.' },
     { category: 'book', mode: 'sale', title: 'Calculus with Analytic Geometry', book_author: 'Leithold', condition: 'Good', price: 400, description: 'Classic Leithold. Solved exercises in pencil, easy to erase.' },
   ]),
 ].reduce((a, b) => a + b, 0);

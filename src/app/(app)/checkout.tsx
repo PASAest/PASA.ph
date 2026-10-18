@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { FakeWallet, METHODS, type PayMethod } from '@/components/FakeWallet';
 import { Screen } from '@/components/Screen';
-import { SelectField } from '@/components/SelectField';
 import { Button, Card, DemoBanner, Divider, Loading, Row, Text } from '@/components/ui';
 import { notify } from '@/lib/actions';
 import { requireVerified, useMe } from '@/lib/auth';
@@ -33,8 +32,6 @@ type Summary = {
   refType: 'booking' | 'order' | 'boost' | 'plus';
 };
 
-const WEEKS = [1, 2, 3, 4];
-
 // 3.7 · Checkout with dummy GCash / Maya payment
 export default function Checkout() {
   const params = useLocalSearchParams<Params>();
@@ -42,7 +39,6 @@ export default function Checkout() {
   const { settings } = useSettings();
   const [booking, setBooking] = useState<Booking | null>(null);
   const [listing, setListing] = useState<Listing | null>(null);
-  const [weeks, setWeeks] = useState(1);
   const [method, setMethod] = useState<PayMethod>('gcash');
   const [paying, setPaying] = useState(false);
 
@@ -91,15 +87,13 @@ export default function Checkout() {
       }
       case 'order': {
         if (!listing) return null;
-        const rent = listing.mode === 'rent';
-        const amount = rent ? listing.price * weeks : listing.price;
+        const amount = listing.price;
         const fee = serviceFee(amount, settings, me);
         return {
           title: listing.title,
-          subtitle: `${rent ? 'Rent' : 'Buy'} from ${fullName(listing.seller)} · delivery by arrangement`,
+          subtitle: `Buy from ${fullName(listing.seller)} · delivery by arrangement`,
           lines: [
-            { label: rent ? `Rent (${weeks} week${weeks > 1 ? 's' : ''})` : 'Item price', amount },
-            ...(rent && listing.deposit ? [{ label: 'Refundable deposit', amount: listing.deposit }] : []),
+            { label: 'Item price', amount },
             { label: 'PASA service fee', amount: fee },
           ],
           fee,
@@ -154,19 +148,17 @@ export default function Checkout() {
         // Someone else may have bought it while this screen was open.
         const { data: fresh } = await supabase.from('listings').select('status').eq('id', listing.id).single();
         if (fresh?.status !== 'available') throw new Error('Sorry, this item was just taken by someone else.');
-        const rent = listing.mode === 'rent';
         const { data, error } = await supabase
           .from('orders')
           .insert({
             listing_id: listing.id,
             buyer_id: me.id,
             seller_id: listing.seller_id,
-            kind: rent ? 'rent' : 'buy',
-            weeks: rent ? weeks : 0,
+            kind: 'buy',
+            weeks: 0,
             amount: summary.payeeAmount,
-            deposit: rent ? listing.deposit : 0,
+            deposit: 0,
             fee: summary.fee,
-            due_at: rent ? daysFromNow(weeks * 7) : null,
           })
           .select('id')
           .single();
@@ -229,15 +221,6 @@ export default function Checkout() {
         <Text variant="title">{summary.title}</Text>
         <Text variant="muted">{summary.subtitle}</Text>
       </Card>
-      {params.type === 'order' && listing?.mode === 'rent' && (
-        <SelectField
-          label="How many weeks?"
-          icon="calendar-outline"
-          value={weeks}
-          onChange={setWeeks}
-          options={WEEKS.map((w) => ({ value: w, label: `${w} week${w > 1 ? 's' : ''}` }))}
-        />
-      )}
       <Card style={{ gap: 8 }}>
         {summary.lines.map((l) => (
           <Row key={l.label} style={{ justifyContent: 'space-between' }}>

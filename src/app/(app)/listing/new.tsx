@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
 import { PhotoPicker } from '@/components/PhotoPicker';
 import { Screen } from '@/components/Screen';
 import { SelectField } from '@/components/SelectField';
@@ -16,10 +15,6 @@ import { toast } from '@/lib/toast';
 import { uploadImage, type Picked } from '@/lib/upload';
 import { colors } from '@/theme';
 
-const MODES = [
-  { value: 'sale' as const, label: 'For sale', icon: 'pricetag-outline' as IconName, hint: 'The buyer keeps it' },
-  { value: 'rent' as const, label: 'For rent', icon: 'repeat-outline' as IconName, hint: 'Weekly rent with a refundable deposit' },
-];
 const CONDITIONS = [
   { value: 'Brand new', label: 'Brand new', hint: 'Unused, still sealed or in its box' },
   { value: 'Like new', label: 'Like new', hint: 'Used briefly, no visible wear' },
@@ -33,15 +28,14 @@ export default function ListingForm() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { me } = useMe();
   const [category, setCategory] = useState<CategoryKey>('book');
-  const [mode, setMode] = useState<'sale' | 'rent'>('sale');
   const [condition, setCondition] = useState<string>('Good');
-  const [form, setForm] = useState({ title: '', author: '', description: '', price: '', deposit: '' });
+  const [form, setForm] = useState({ title: '', author: '', description: '', price: '' });
   const [photo, setPhoto] = useState<Picked | null>(null);
   const [existingPhoto, setExistingPhoto] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
-  const digits = (k: 'price' | 'deposit') => (v: string) => set(k)(v.replace(/\D/g, ''));
+  const digits = (k: 'price') => (v: string) => set(k)(v.replace(/\D/g, ''));
 
   useEffect(() => {
     if (!id) return;
@@ -49,10 +43,9 @@ export default function ListingForm() {
       const l = data as Listing;
       if (!l) return;
       setCategory(categoryOf(l.category).key);
-      setMode(l.mode);
       setCondition(l.condition);
       setExistingPhoto(l.photo_url);
-      setForm({ title: l.title, author: l.book_author, description: l.description, price: String(l.price), deposit: String(l.deposit || '') });
+      setForm({ title: l.title, author: l.book_author, description: l.description, price: String(l.price) });
     });
   }, [id]);
 
@@ -73,13 +66,13 @@ export default function ListingForm() {
       const row = {
         seller_id: me.id,
         category,
-        mode,
+        mode: 'sale',
         title: form.title.trim(),
         book_author: category === 'book' ? form.author.trim() : '',
         description: form.description.trim(),
         condition,
         price: Number(form.price),
-        deposit: mode === 'rent' ? Number(form.deposit || 0) : 0,
+        deposit: 0,
         photo_url,
         // Photos and possible answer keys / quizzes go to the admin first (the database enforces the photo rule too).
         ...(check.needsReview || photo ? { status: 'pending_review', review_note: check.needsReview ?? '' } : {}),
@@ -130,19 +123,9 @@ export default function ListingForm() {
         onChange={setCategory}
         options={CATEGORIES.map((c) => ({ value: c.key, label: categoryOf(c.key).label, icon: `${c.icon}-outline` as IconName }))}
       />
-      <SelectField label="Sell or rent out?" value={mode} onChange={setMode} options={MODES} />
       <Field label="Title" placeholder={category === 'book' ? 'Advanced Algebra, 4th Ed.' : category === 'calculator' ? 'Casio fx-991ES Plus' : 'e.g. Lab gown, medium'} value={form.title} onChangeText={set('title')} />
       {category === 'book' && <Field label="Author" placeholder="e.g. Valix, Peralta" value={form.author} onChangeText={set('author')} />}
-      <Row gap={12} style={{ alignItems: 'flex-start' }}>
-        <View style={{ flex: 1 }}>
-          <Field label={mode === 'rent' ? 'Rent per week' : 'Price'} placeholder="₱" value={form.price} onChangeText={digits('price')} keyboardType="number-pad" />
-        </View>
-        {mode === 'rent' && (
-          <View style={{ flex: 1 }}>
-            <Field label="Deposit (refundable)" placeholder="₱" value={form.deposit} onChangeText={digits('deposit')} keyboardType="number-pad" />
-          </View>
-        )}
-      </Row>
+      <Field label="Price" placeholder="₱" value={form.price} onChangeText={digits('price')} keyboardType="number-pad" />
       <SelectField label="Condition" icon="sparkles-outline" value={condition} onChange={setCondition} options={CONDITIONS} />
       <Field label="Description" placeholder="Edition, size, what's included, any marks or wear…" value={form.description} onChangeText={set('description')} multiline />
       <Row style={{ alignItems: 'flex-start' }}>

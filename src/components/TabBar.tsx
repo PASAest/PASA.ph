@@ -81,7 +81,7 @@ export function TabBar({ state, navigation }: Props) {
         onClose={() => setMenu(false)}
         items={[
           { label: 'Ask for help', icon: 'help-buoy-outline', onPress: go(() => router.push('/post/new')) },
-          { label: 'Sell or rent an item', icon: 'pricetag-outline', onPress: go(() => requireVerified(me) && router.push('/listing/new')) },
+          { label: 'Sell an item', icon: 'pricetag-outline', onPress: go(() => requireVerified(me) && router.push('/listing/new')) },
           { label: 'Find a tutor', icon: 'school-outline', onPress: go(() => router.navigate({ pathname: '/(tabs)', params: { filter: 'tutors' } })) },
           me.tutor_status === 'approved'
             ? { label: 'Offer tutoring', icon: 'megaphone-outline', onPress: go(() => router.push('/post/new')) }

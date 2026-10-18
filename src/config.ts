@@ -67,7 +67,7 @@ export const SUBJECTS = [
   'Criminology', 'Nursing Concepts',
 ];
 
-// Academic items students can sell or rent in Assets.
+// Academic items students can sell in Assets.
 export const CATEGORIES = [
   { key: 'book', label: 'Books', icon: 'book' },
   { key: 'calculator', label: 'Calculators', icon: 'calculator' },

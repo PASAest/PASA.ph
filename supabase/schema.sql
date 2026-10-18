@@ -433,6 +433,109 @@ drop trigger if exists listings_guard on public.listings;
 create trigger listings_guard before insert or update on public.listings
   for each row execute function public.guard_listing();
 
+-- ─────────────────────────────────────────────────────────────
+-- Rentals were removed: items are sold only. Older rental rows stay as they are, but nothing new can be a rental.
+-- ─────────────────────────────────────────────────────────────
+create or replace function public.guard_no_rentals()
+returns trigger language plpgsql as $$
+begin
+  if tg_table_name = 'listings' then
+    if new.mode = 'rent' and (tg_op = 'INSERT' or old.mode <> 'rent') then raise exception 'Items can only be sold'; end if;
+  elsif tg_op = 'INSERT' and new.kind = 'rent' then
+    raise exception 'Items can only be bought';
+  end if;
+  return new;
+end $$;
+drop trigger if exists listings_no_rent on public.listings;
+create trigger listings_no_rent before insert or update of mode on public.listings
+  for each row execute function public.guard_no_rentals();
+drop trigger if exists orders_no_rent on public.orders;
+create trigger orders_no_rent before insert on public.orders
+  for each row execute function public.guard_no_rentals();
+
+-- Remove the rental listings nobody has rented (demo data).
+delete from public.listings l
+where l.mode = 'rent' and not exists (select 1 from public.orders o where o.listing_id = l.id);
+
+-- ─────────────────────────────────────────────────────────────
+-- Orders, bookings and payments follow fixed steps, so nobody can cancel or change a deal after it's done:
+--   paid → completed   only the buyer (when they confirm they received the item)
+--   paid → cancelled   the buyer or the seller, but only until the buyer has received it
+--   completed / cancelled orders can't change again, and their money fields can never be edited.
+-- Admins and the SQL Editor are not limited by these.
+-- ─────────────────────────────────────────────────────────────
+create or replace function public.guard_order()
+returns trigger language plpgsql as $$
+begin
+  if auth.uid() is null or is_admin() then return new; end if;
+  if new.buyer_id <> old.buyer_id or new.seller_id <> old.seller_id or new.listing_id <> old.listing_id or new.kind <> old.kind
+     or new.amount <> old.amount or new.fee <> old.fee or new.deposit <> old.deposit or new.weeks <> old.weeks then
+    raise exception 'An order can''t be edited after it''s placed';
+  end if;
+  if new.status is distinct from old.status then
+    if old.status = 'paid' and new.status = 'completed' then
+      if auth.uid() <> old.buyer_id then raise exception 'Only the buyer can confirm they received the item'; end if;
+    elsif old.status = 'paid' and new.status = 'cancelled' then
+      null; -- either side, before the buyer has received it
+    else
+      raise exception 'This order is already %, so it can''t be changed', old.status;
+    end if;
+  end if;
+  return new;
+end $$;
+drop trigger if exists orders_guard on public.orders;
+create trigger orders_guard before update on public.orders
+  for each row execute function public.guard_order();
+
+-- A tutoring booking that is finished, cancelled or declined can't change, and only the student can mark it done.
+create or replace function public.guard_booking()
+returns trigger language plpgsql as $$
+begin
+  if auth.uid() is null or is_admin() then return new; end if;
+  if new.status is distinct from old.status then
+    if old.status in ('completed', 'cancelled', 'declined') then
+      raise exception 'This booking is already %, so it can''t be changed', old.status;
+    end if;
+    if new.status = 'completed' and auth.uid() <> old.student_id then
+      raise exception 'Only the student can mark a session as done';
+    end if;
+  end if;
+  return new;
+end $$;
+drop trigger if exists bookings_guard on public.bookings;
+create trigger bookings_guard before update on public.bookings
+  for each row execute function public.guard_booking();
+
+-- Payments: only held money can move, only the payer releases it, and a payment can't be refunded once the
+-- item was received or the session marked done.
+create or replace function public.guard_payment()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null or is_admin() then return new; end if;
+  if new.payer_id <> old.payer_id or new.payee_id is distinct from old.payee_id or new.ref_type <> old.ref_type
+     or new.ref_id is distinct from old.ref_id or new.method <> old.method or new.amount <> old.amount
+     or new.fee <> old.fee or new.payee_amount is distinct from old.payee_amount or new.reference_no <> old.reference_no then
+    raise exception 'A payment can''t be edited';
+  end if;
+  if new.status is distinct from old.status then
+    if old.status <> 'held' then raise exception 'This payment is already %, so it can''t be changed', old.status; end if;
+    if new.status = 'released' then
+      if auth.uid() <> old.payer_id then raise exception 'Only the payer can release a payment'; end if;
+    elsif new.status = 'refunded' then
+      if (old.ref_type = 'order' and exists (select 1 from orders where id = old.ref_id and status = 'completed'))
+         or (old.ref_type = 'booking' and exists (select 1 from bookings where id = old.ref_id and status = 'completed')) then
+        raise exception 'The item was already received, so this payment can''t be refunded';
+      end if;
+    else
+      raise exception 'A payment can only be released or refunded';
+    end if;
+  end if;
+  return new;
+end $$;
+drop trigger if exists payments_guard on public.payments;
+create trigger payments_guard before update on public.payments
+  for each row execute function public.guard_payment();
+
 -- Notify the student/tutor when an admin reviews them, and sellers when a listing is reviewed.
 create or replace function public.on_profile_review()
 returns trigger language plpgsql security definer set search_path = public as $$
@@ -652,6 +755,11 @@ begin
     perform notify(new.seller_id, case when new.kind = 'rent' then 'Your item was rented' else 'Your item was bought' end,
       display_name(new.buyer_id) || ' paid for "' || t || '". Arrange delivery in chat.', '/activity');
   elsif new.status <> old.status then
+    if new.status = 'completed' then
+      update payments set status = 'released' where ref_type = 'order' and ref_id = new.id and status = 'held';
+    elsif new.status = 'cancelled' then
+      update payments set status = 'refunded' where ref_type = 'order' and ref_id = new.id and status = 'held';
+    end if;
     if new.status = 'completed' and new.kind = 'buy' then
       update listings set status = 'sold' where id = new.listing_id;
       perform notify(new.seller_id, 'Payment released', 'PHP ' || new.amount || ' for "' || t || '" is now yours.', '/activity');

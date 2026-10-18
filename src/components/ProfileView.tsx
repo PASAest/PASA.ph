@@ -280,7 +280,7 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
           {isMe && <Button title="Add" icon="add" small variant="ghost" onPress={() => router.push('/listing/new')} />}
         </Row>
         {listings.length === 0 ? (
-          <Empty icon="library-outline" title="No listings" text={isMe ? 'Sell or rent out books and calculators you no longer need.' : undefined} />
+          <Empty icon="library-outline" title="No listings" text={isMe ? 'Sell books, calculators and other school items you no longer need.' : undefined} />
         ) : (
           <View style={styles.grid}>
             {listings.map((l) => (

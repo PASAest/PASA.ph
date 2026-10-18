@@ -188,7 +188,7 @@ export default function Landing() {
               Turn Potential Into <Text style={{ fontFamily: H7, fontSize: wide ? 26 : tablet ? 24 : 21, color: INK_ON_LIGHT, backgroundColor: P.marker, paddingHorizontal: 4 }}>PASAbilities</Text>.
             </Text>
             <Text style={styles.lead}>
-              PASA is where students tutor students and trade the stuff school makes you buy. Book a tutor for an online session, sell or rent your old books and calculators, and pay safely with GCash or Maya.
+              PASA is where students tutor students and trade the stuff school makes you buy. Book a tutor for an online session, sell your old books and calculators, and pay safely with GCash or Maya.
             </Text>
             <View style={{ flexDirection: 'row', gap: 18, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
               <Btn title="Create a free account" onPress={start} />
@@ -274,7 +274,7 @@ export default function Landing() {
             <Text style={styles.label}>Assets</Text>
             <Text style={[styles.h2, { fontSize: wide ? 42 : tablet ? 38 : 30 }]}>The calculator you needed for one sem, someone else needs next sem.</Text>
             <Text style={[styles.body, { marginTop: 16 }]}>
-              Sell or rent out books, calculators, lab gowns, drafting sets and uniforms to students nearby. Rentals come with a refundable deposit, and delivery is arranged between you in chat.
+              Sell books, calculators, lab gowns, drafting sets and uniforms to students nearby. Delivery is arranged between you in chat, and the money is released to the seller once the buyer confirms they got the item.
             </Text>
             <Text style={[styles.body, { marginTop: 12 }]}>Listings with photos are checked by an admin first, so answer keys and quizzes stay off PASA.</Text>
           </Reveal>
@@ -283,7 +283,7 @@ export default function Landing() {
               <Item icon="calculator-outline" title="Casio fx-991EX ClassWiz" price="₱900" note="Like new" />
               <Item icon="book-outline" title="Cost Accounting, Guerrero" price="₱420" note="Good" />
               <Item icon="flask-outline" title="Lab Gown (Medium)" price="₱280" note="Like new" />
-              <Item icon="construct-outline" title="Drafting Set + T-square" price="₱40/wk" note="For rent" />
+              <Item icon="construct-outline" title="Drafting Set + T-square" price="₱250" note="Good" />
             </View>
           </Reveal>
         </View>

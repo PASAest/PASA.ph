@@ -77,7 +77,7 @@ export default function Verify() {
           <Ionicons name="shield-checkmark" size={48} color={colors.success} />
           <Text variant="title">You're a verified student</Text>
           <Text variant="muted" style={{ textAlign: 'center' }}>
-            You can book tutors, buy, rent and sell on PASA.
+            You can book tutors, buy and sell on PASA.
           </Text>
         </Card>
       ) : (

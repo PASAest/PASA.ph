@@ -14,15 +14,13 @@ import type { Listing } from '@/lib/types';
 import { useFocusLoad } from '@/lib/useFocusLoad';
 import { colors, font, radius, space, themed } from '@/theme';
 
-type Filter = 'all' | 'rent' | 'sale' | 'saved';
+type Filter = 'all' | 'saved';
 const FILTERS: FilterOption<Filter>[] = [
-  { value: 'all', label: 'Sale & rent', icon: 'swap-vertical-outline' },
-  { value: 'sale', label: 'For sale', icon: 'pricetag-outline' },
-  { value: 'rent', label: 'For rent', icon: 'repeat-outline' },
+  { value: 'all', label: 'All items', icon: 'apps-outline' },
   { value: 'saved', label: 'Saved', icon: 'heart-outline' },
 ];
 
-// 3.1 · Assets: academic items for sale or rent, with category and type filters
+// 3.1 · Assets: academic items for sale, with category and saved filters
 export default function Assets() {
   const { me } = useMe();
   const cols = useGridColumns();
@@ -58,7 +56,6 @@ export default function Assets() {
   const q = search.trim().toLowerCase();
   // Everything except the category filter, so the dropdown can show how many items each category has.
   const matching = listings.filter((l) => {
-    if (filter === 'rent' || filter === 'sale') { if (l.mode !== filter) return false; }
     if (filter === 'saved' && !favorites.has(l.id)) return false;
     return !q || `${l.title} ${l.book_author} ${l.description}`.toLowerCase().includes(q);
   });
@@ -106,7 +103,7 @@ export default function Assets() {
             <Empty
               icon="library-outline"
               title={q ? 'No matches' : 'No items yet'}
-              text={q || category ? 'Try a different search or category.' : 'Got academic stuff you no longer need? List it for sale or rent.'}
+              text={q || category ? 'Try a different search or category.' : 'Got academic stuff you no longer need? List it for sale.'}
               action={<Button title="List an item" small onPress={() => router.push('/listing/new')} />}
             />
           ) : (
