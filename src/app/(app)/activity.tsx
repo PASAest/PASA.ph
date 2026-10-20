@@ -9,6 +9,7 @@ import { confirm, notify, openChat } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
 import { dateTime, fullName, peso } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
+import { toast } from '@/lib/toast';
 import type { Booking, BookingStatus, Order, Profile } from '@/lib/types';
 import { useFocusLoad } from '@/lib/useFocusLoad';
 import { useNow } from '@/lib/useNow';
@@ -229,7 +230,15 @@ function BookingCard({ booking: b, me, reviewed, onChange }: { booking: Booking;
 function OrderCard({ order: o, me, reviewed, onChange }: { order: Order; me: Profile; reviewed: boolean; onChange: () => void }) {
   const isSeller = o.seller_id === me.id;
   const other = isSeller ? o.buyer : o.seller;
-  const status = ORDER_STATUS[o.status];
+  const delivered = !!o.delivered_at;
+  const status = o.status === 'paid' && delivered ? { label: isSeller ? 'Delivered · waiting for buyer' : 'Delivered · confirm you got it', tone: 'blue' as const } : ORDER_STATUS[o.status];
+
+  const confirmDelivery = async () => {
+    const { error } = await supabase.from('orders').update({ delivered_at: new Date().toISOString() }).eq('id', o.id);
+    if (error) return notify('Could not confirm', error.message);
+    toast('Delivery confirmed. The buyer was asked to confirm they received it.');
+    onChange();
+  };
 
   const update = async (status: Order['status']) => {
     const { error } = await supabase.from('orders').update({ status }).eq('id', o.id);
@@ -253,6 +262,12 @@ function OrderCard({ order: o, me, reviewed, onChange }: { order: Order; me: Pro
         <Ionicons name="cube-outline" size={16} color={colors.muted} />
         <Text variant="muted">Delivery by arrangement in chat</Text>
       </Row>
+      {delivered && (
+        <Row>
+          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+          <Text variant="muted">Seller confirmed delivery · {dateTime(o.delivered_at!)}</Text>
+        </Row>
+      )}
       <Row>
         <Ionicons name="cash-outline" size={16} color={colors.muted} />
         <Text variant="muted">
@@ -270,6 +285,16 @@ function OrderCard({ order: o, me, reviewed, onChange }: { order: Order; me: Pro
             }}
           />
         )}
+        {isSeller && o.status === 'paid' && !delivered && (
+          <Button
+            title="Delivery confirmed"
+            small
+            icon="cube-outline"
+            onPress={async () => {
+              if (await confirm('Item handed over?', 'Only confirm after the buyer has the item. They’ll be asked to confirm, and they can’t cancel after this.', 'Yes, delivered')) confirmDelivery();
+            }}
+          />
+        )}
         {o.status === 'completed' && !reviewed && other && (
           <Button
             title={`Rate ${other.first_name}`}
@@ -281,7 +306,16 @@ function OrderCard({ order: o, me, reviewed, onChange }: { order: Order; me: Pro
         {other && o.status !== 'cancelled' && (
           <Button title="Message" small variant="outline" icon="chatbubble-outline" onPress={() => openChat(other.id)} />
         )}
-        {o.status === 'paid' && (
+        {!isSeller && o.status === 'paid' && delivered && other && (
+          <Button
+            title="Report a problem"
+            small
+            variant="outline"
+            icon="flag-outline"
+            onPress={() => router.push({ pathname: '/report', params: { type: 'user', id: other.id } })}
+          />
+        )}
+        {o.status === 'paid' && !delivered && (
           <Button
             title="Cancel"
             small

@@ -16,6 +16,7 @@ type RefType = 'booking' | 'order' | 'boost' | 'plus';
 type PayStatus = 'held' | 'released' | 'refunded' | 'paid';
 type Payment = {
   id: string;
+  ref_id: string | null;
   ref_type: RefType;
   method: string;
   amount: number;
@@ -41,16 +42,28 @@ export default function Payments() {
   const [status, setStatus] = useState<PayStatus | 'all'>('all');
   const [view, setView] = useState<'payments' | 'payouts'>('payments');
   const [payouts, setPayouts] = useState<Payout[]>([]);
+  // Where each item order / tutoring session stands, so a held payment can be told apart from a delivered one.
+  const [progress, setProgress] = useState<Record<string, string>>({});
 
   const load = async () => {
-    const [p, w] = await Promise.all([
+    const [p, w, o, b] = await Promise.all([
       supabase
         .from('payments')
         .select('*, payer:profiles!payments_payer_id_fkey(*), payee:profiles!payments_payee_id_fkey(*)')
         .order('created_at', { ascending: false })
         .limit(1000),
       supabase.from('payouts').select('*, user:profiles!payouts_user_id_fkey(*)').order('created_at', { ascending: false }),
+      supabase.from('orders').select('id, status, delivered_at'),
+      supabase.from('bookings').select('id, status'),
     ]);
+    const map: Record<string, string> = {};
+    for (const r of (o.data ?? []) as { id: string; status: string; delivered_at: string | null }[]) {
+      map[r.id] = r.status === 'completed' ? 'Received ✓' : r.status === 'cancelled' ? 'Cancelled' : r.delivered_at ? 'Delivered · waiting for buyer' : 'Waiting for delivery';
+    }
+    for (const r of (b.data ?? []) as { id: string; status: string }[]) {
+      map[r.id] = r.status === 'completed' ? 'Session done ✓' : ['cancelled', 'declined'].includes(r.status) ? 'Cancelled' : r.status === 'paid' ? 'Confirmed · upcoming' : 'Not paid yet';
+    }
+    setProgress(map);
     setPayments((p.data as Payment[]) ?? []);
     setPayouts((w.data as Payout[]) ?? []);
   };
@@ -102,6 +115,7 @@ export default function Payments() {
       </AdminPage>
     );
   }
+  const deliveryOf = (p: Payment) => (p.ref_id && progress[p.ref_id]) || '—';
   const shown = payments.filter((p) => (type === 'all' || p.ref_type === type) && (status === 'all' || p.status === status));
   const sum = (f: (p: Payment) => number) => shown.reduce((s, p) => s + f(p), 0);
 
@@ -129,6 +143,7 @@ export default function Payments() {
                 service_fee: p.fee,
                 pasa_revenue: revenueOf(p),
                 status: p.status,
+                delivery: deliveryOf(p),
               })),
             )
           }
@@ -186,6 +201,7 @@ export default function Payments() {
           { key: 'amount', label: 'Amount', flex: 0.8, render: (p) => <Text style={{ fontFamily: font.semibold }}>{peso(p.amount)}</Text> },
           { key: 'fee', label: 'PASA revenue', flex: 0.9, render: (p) => <Text>{peso(revenueOf(p))}</Text> },
           { key: 'status', label: 'Status', flex: 0.9, render: (p) => <Badge label={p.status} tone={STATUS_TONE[p.status]} /> },
+          { key: 'delivery', label: 'Delivery', flex: 1.2, render: (p) => <Text variant="muted">{deliveryOf(p)}</Text> },
           { key: 'date', label: 'Date', flex: 1.2, render: (p) => <Text variant="muted">{dateTime(p.created_at)}</Text> },
         ]}
       />

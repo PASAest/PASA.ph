@@ -110,6 +110,8 @@ export type Order = {
   fee: number;
   status: 'paid' | 'completed' | 'returned' | 'cancelled';
   due_at: string | null;
+  /** When the seller confirmed they handed the item over. After this the buyer can no longer cancel. */
+  delivered_at: string | null;
   created_at: string;
   listing?: Listing;
   buyer?: Profile;

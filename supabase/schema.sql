@@ -457,6 +457,10 @@ create trigger orders_no_rent before insert on public.orders
 delete from public.listings l
 where l.mode = 'rent' and not exists (select 1 from public.orders o where o.listing_id = l.id);
 
+-- The seller confirms they handed the item over ("Delivery confirmed"). After that the buyer can't cancel any more:
+-- they confirm they received it, or report a problem to the PASA team.
+alter table public.orders add column if not exists delivered_at timestamptz;
+
 -- ─────────────────────────────────────────────────────────────
 -- Orders, bookings and payments follow fixed steps, so nobody can cancel or change a deal after it's done:
 --   paid → completed   only the buyer (when they confirm they received the item)
@@ -472,11 +476,21 @@ begin
      or new.amount <> old.amount or new.fee <> old.fee or new.deposit <> old.deposit or new.weeks <> old.weeks then
     raise exception 'An order can''t be edited after it''s placed';
   end if;
+  -- "Delivery confirmed": only the seller, once, while the order is still paid.
+  if new.delivered_at is distinct from old.delivered_at then
+    if old.delivered_at is not null then raise exception 'Delivery was already confirmed'; end if;
+    if auth.uid() <> old.seller_id then raise exception 'Only the seller can confirm the delivery'; end if;
+    if old.status <> 'paid' or new.status <> old.status then raise exception 'This order is already %, so it can''t be changed', old.status; end if;
+    new.delivered_at := now();
+  end if;
   if new.status is distinct from old.status then
     if old.status = 'paid' and new.status = 'completed' then
       if auth.uid() <> old.buyer_id then raise exception 'Only the buyer can confirm they received the item'; end if;
     elsif old.status = 'paid' and new.status = 'cancelled' then
-      null; -- either side, before the buyer has received it
+      -- Either side may cancel, but only until the seller has confirmed the delivery.
+      if old.delivered_at is not null then
+        raise exception 'The seller already confirmed the delivery. Confirm that you received it, or report a problem.';
+      end if;
     else
       raise exception 'This order is already %, so it can''t be changed', old.status;
     end if;
@@ -750,6 +764,9 @@ returns trigger language plpgsql security definer set search_path = public as $$
 declare t text;
 begin
   select title into t from listings where id = new.listing_id;
+  if tg_op = 'UPDATE' and new.delivered_at is not null and old.delivered_at is null then
+    perform notify(new.buyer_id, 'Delivery confirmed', display_name(new.seller_id) || ' says "' || t || '" was handed over. Tap "I received it" once you have it.', '/activity');
+  end if;
   if tg_op = 'INSERT' then
     update listings set status = case when new.kind = 'rent' then 'on_loan' else 'reserved' end where id = new.listing_id;
     perform notify(new.seller_id, case when new.kind = 'rent' then 'Your item was rented' else 'Your item was bought' end,
