@@ -1,15 +1,12 @@
 // PASA serves tertiary-level students in Santa Rosa, Laguna. Edit these lists to match.
 
-// Colleges and universities with campuses in Santa Rosa, Laguna (Wikipedia and local listings, Oct 2026).
-// Double-check names with the group; "Other" lets students type a school that isn't listed.
+// The schools PASA is open to (as set by the group). "Other" lets students type a school that isn't listed.
 export const SCHOOLS = [
-  'Polytechnic University of the Philippines – Santa Rosa',
-  'University of Santo Tomas – Santa Rosa',
-  'Our Lady of Fatima University – Laguna (Santa Rosa)',
-  'Our Lady of Assumption College – Santa Rosa',
+  'Polytechnic University of the Philippines – Sta. Rosa',
+  'Our Lady of Fatima University – Laguna Campus',
   'STI College – Santa Rosa',
-  'Citi Global College',
-  'University of the East – Santa Rosa',
+  'St. Ignatius – Santa Rosa Campus',
+  'Asia Technological School of Science and Arts (ASIATECH)',
   'Other',
 ];
 
@@ -101,8 +98,12 @@ export const CANCEL_CUTOFF_MIN = 15; // free cancellation until 15 minutes befor
 export const DELIVERY_NOTE = 'Delivery is by internal arrangement. Agree on how and where with the seller in chat.';
 
 // Landing page links. Fill these in once the group creates them (business email, Facebook page, APK link).
-export const CONTACT_EMAIL = '';
-export const FACEBOOK_URL = '';
+export const CONTACT_EMAIL = 'pasa.phservices@gmail.com';
+export const FACEBOOK_PAGE_NAME = 'PASA: Peer Academic Services and Assets';
+export const FACEBOOK_URL = 'https://www.facebook.com/profile.php?id=61594780997769';
+
+// Banks offered for Online Banking payments and withdrawals.
+export const BANKS = ['BDO Unibank', 'BPI', 'Metrobank', 'UnionBank', 'Landbank', 'PNB', 'Security Bank', 'RCBC', 'China Bank', 'EastWest Bank'];
 export const ANDROID_APK_URL = 'https://expo.dev/artifacts/eas/hE0h1mNmTYPfVY0db2sHJLVzBoeGPNytUC17xrTt1sg.apk';
 // Store badges on the landing page. PASA isn't listed yet: the Google Play badge downloads ANDROID_APK_URL while it's set,
 // and the App Store badge opens the App Store itself.

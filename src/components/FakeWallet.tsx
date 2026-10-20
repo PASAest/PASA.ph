@@ -1,15 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { BANKS } from '@/config';
 import { peso } from '@/lib/format';
 import { colors, font, radius, space, themed } from '@/theme';
 import { Button, DemoBanner, Text } from './ui';
 
-export type PayMethod = 'gcash' | 'maya';
+export type PayMethod = 'gcash' | 'maya' | 'online_banking';
 
-export const METHODS: Record<PayMethod, { label: string; color: string; icon: 'wallet' | 'card' }> = {
+export const METHODS: Record<PayMethod, { label: string; color: string; icon: 'wallet' | 'card' | 'business' }> = {
   gcash: { label: 'GCash', color: '#007DFE', icon: 'wallet' },
   maya: { label: 'Maya', color: '#00B464', icon: 'card' },
+  online_banking: { label: 'Online Banking', color: '#16324A', icon: 'business' },
 };
 
 /** Label for old payment rows that used the removed cash option. */
@@ -33,7 +35,8 @@ export function FakeWallet({
   onClose: (success: boolean) => void;
 }) {
   // Mounted fresh for each payment, so state starts clean every time.
-  const [step, setStep] = useState<'pin' | 'processing' | 'done'>('pin');
+  const [step, setStep] = useState<'bank' | 'pin' | 'processing' | 'done'>(method === 'online_banking' ? 'bank' : 'pin');
+  const [bank, setBank] = useState<string | null>(null);
   const [pin, setPin] = useState('');
   const [ref, setRef] = useState<string | null>(null);
   const m = METHODS[method];
@@ -66,10 +69,40 @@ export function FakeWallet({
           </View>
           <View style={{ padding: space(5), gap: space(4) }}>
             <DemoBanner />
-            {step === 'pin' && (
+            {step === 'bank' && (
               <>
                 <Text style={{ textAlign: 'center' }} variant="muted">
                   Pay PASA
+                </Text>
+                <Text style={{ textAlign: 'center', fontFamily: font.black, fontSize: 32 }}>{peso(amount)}</Text>
+                <Text variant="label" style={{ textAlign: 'center' }}>
+                  Choose your bank
+                </Text>
+                <View style={{ gap: 8 }}>
+                  {BANKS.slice(0, 6).map((b) => (
+                    <Pressable
+                      key={b}
+                      onPress={() => {
+                        setBank(b);
+                        setStep('pin');
+                      }}
+                      style={{ padding: 14, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 10 }}
+                    >
+                      <Ionicons name="business-outline" size={20} color={colors.primaryDark} />
+                      <Text style={{ flex: 1, fontFamily: font.semibold }}>{b}</Text>
+                      <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+                    </Pressable>
+                  ))}
+                </View>
+                <Pressable onPress={() => onClose(false)}>
+                  <Text style={{ textAlign: 'center', color: colors.muted }}>Cancel</Text>
+                </Pressable>
+              </>
+            )}
+            {step === 'pin' && (
+              <>
+                <Text style={{ textAlign: 'center' }} variant="muted">
+                  Pay PASA{bank ? ` · ${bank}` : ''}
                 </Text>
                 <Text style={{ textAlign: 'center', fontFamily: font.black, fontSize: 32 }}>{peso(amount)}</Text>
                 <Text variant="label" style={{ textAlign: 'center' }}>
@@ -103,7 +136,7 @@ export function FakeWallet({
                 <Ionicons name="checkmark-circle" size={72} color={colors.success} />
                 <Text variant="h2">Payment successful</Text>
                 <Text variant="muted" style={{ textAlign: 'center' }}>
-                  {peso(amount)} paid through {m.label}.
+                  {peso(amount)} paid through {bank ? `${bank} ` : ''}{m.label}.
                 </Text>
                 <Text style={{ fontFamily: font.bold }}>Ref. No. {ref}</Text>
                 <Button title="Done" onPress={() => onClose(true)} style={{ alignSelf: 'stretch' }} />

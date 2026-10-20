@@ -7,7 +7,7 @@ import { Avatar, Badge, Button, Card, Chip, Empty, Field, Loading, Row, Text } f
 import { CANCEL_CUTOFF_MIN, isMeetingLink } from '@/config';
 import { confirm, notify, openChat } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
-import { dateTime, fullName, peso } from '@/lib/format';
+import { dateTime, fullName, paidTotal, peso, takeHome } from '@/lib/format';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/lib/toast';
 import type { Booking, BookingStatus, Order, Profile } from '@/lib/types';
@@ -170,7 +170,7 @@ function BookingCard({ booking: b, me, reviewed, onChange }: { booking: Booking;
       <Row>
         <Ionicons name="cash-outline" size={16} color={colors.muted} />
         <Text variant="muted">
-          {isTutor ? `You earn ${peso(b.amount)}` : `${peso(b.amount + b.fee)} total (incl. ${peso(b.fee)} fee)`}
+          {isTutor ? `You earn ${peso(takeHome(b))}${b.fee_on_top === false ? ` (after PASA’s ${peso(b.fee)} commission)` : ''}` : `${peso(paidTotal(b))} total`}
         </Text>
       </Row>
       {!!b.notes && <Text variant="muted">“{b.notes}”</Text>}
@@ -239,7 +239,7 @@ function BookingCard({ booking: b, me, reviewed, onChange }: { booking: Booking;
               icon="checkmark-done"
               onPress={async () => {
                 const early = started ? '' : "The session hasn't started yet. ";
-                if (await confirm('Mark session as done?', `${early}${peso(b.amount)} will be released to ${other?.first_name}.`, 'Yes, done')) update('completed');
+                if (await confirm('Mark session as done?', `${early}${peso(takeHome(b))} will be released to ${other?.first_name}.`, 'Yes, done')) update('completed');
               }}
             />
             <Button title="Extend +30 min" small variant="outline" onPress={() => router.push({ pathname: '/checkout', params: { type: 'extend', id: b.id } })} />
@@ -308,7 +308,7 @@ function OrderCard({ order: o, me, reviewed, onChange }: { order: Order; me: Pro
       <Row>
         <Ionicons name="cash-outline" size={16} color={colors.muted} />
         <Text variant="muted">
-          {isSeller ? `You earn ${peso(o.amount)}` : `${peso(o.amount + o.fee)} total`}
+          {isSeller ? `You earn ${peso(takeHome(o))}${o.fee_on_top === false ? ` (after PASA’s ${peso(o.fee)} commission)` : ''}` : `${peso(paidTotal(o))} total`}
         </Text>
       </Row>
       <Row style={{ flexWrap: 'wrap' }}>
@@ -318,7 +318,7 @@ function OrderCard({ order: o, me, reviewed, onChange }: { order: Order; me: Pro
             small
             icon="checkmark-done"
             onPress={async () => {
-              if (await confirm('Got the item?', `${peso(o.amount)} will be released to ${other?.first_name}.`, 'Yes, received')) update('completed');
+              if (await confirm('Got the item?', `${peso(takeHome(o))} will be released to ${other?.first_name}.`, 'Yes, received')) update('completed');
             }}
           />
         )}

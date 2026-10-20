@@ -70,7 +70,7 @@ export default function Payments() {
   useFocusLoad(load);
 
   const setPayout = async (p: Payout, next: 'paid' | 'rejected') => {
-    const msg = next === 'paid' ? `Mark ${peso(p.amount)} as sent to ${p.account_name}'s ${METHODS[p.method].label} (${p.account_number})?` : 'The amount goes back to their wallet balance.';
+    const msg = next === 'paid' ? `Mark ${peso(p.amount)} as sent to ${p.account_name}'s ${p.bank ? `${p.bank} ` : ''}${METHODS[p.method].label} (${p.account_number})?` : 'The amount goes back to their wallet balance.';
     if (!(await confirm(next === 'paid' ? 'Mark as sent?' : 'Reject withdrawal?', msg, next === 'paid' ? 'Mark sent' : 'Reject'))) return;
     const { error } = await supabase.from('payouts').update({ status: next }).eq('id', p.id);
     if (error) return notify('Could not update', error.message);
@@ -93,7 +93,7 @@ export default function Payments() {
           empty="No withdrawal requests yet."
           columns={[
             { key: 'who', label: 'Tutor / seller', flex: 1.4, render: (p) => <Text style={{ fontFamily: font.bold }}>{fullName(p.user)}</Text> },
-            { key: 'to', label: 'Send to', flex: 1.6, render: (p) => <Text variant="muted">{`${METHODS[p.method].label} · ${p.account_name} · ${p.account_number}`}</Text> },
+            { key: 'to', label: 'Send to', flex: 1.6, render: (p) => <Text variant="muted">{`${p.bank ? `${p.bank} · ` : ''}${METHODS[p.method].label} · ${p.account_name} · ${p.account_number}`}</Text> },
             { key: 'amount', label: 'Amount', flex: 0.8, render: (p) => <Text style={{ fontFamily: font.semibold }}>{peso(p.amount)}</Text> },
             { key: 'date', label: 'Requested', flex: 1.1, render: (p) => <Text variant="muted">{dateTime(p.created_at)}</Text> },
             {

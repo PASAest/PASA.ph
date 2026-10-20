@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { confirm, notify, openChat } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
 import { toast } from '@/lib/toast';
-import { isPlus, peso, shortDate, yearLabel } from '@/lib/format';
+import { isPlus, paidTotal, peso, shortDate, takeHome, yearLabel } from '@/lib/format';
 import { PRESENCE_LABEL, useStatuses } from '@/lib/presence';
 import { supabase } from '@/lib/supabase';
 import type { Listing, Order, Profile, Rating, Review } from '@/lib/types';
@@ -276,7 +276,7 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
             <Ionicons name="star" size={22} color={colors.warning} />
             <View style={{ flex: 1 }}>
               <Text variant="title">Get PASA Plus</Text>
-              <Text variant="muted">Lower fees, free boosts and a Plus badge.</Text>
+              <Text variant="muted">Lower commission, free boosts and a Plus badge.</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.warning} />
           </Row>
@@ -358,7 +358,7 @@ function OrderRow({ order: o, meId }: { order: Order; meId: string }) {
           {o.listing?.title ?? 'Item'}
         </Text>
         <Text variant="muted" numberOfLines={1} style={{ fontSize: 13 }}>
-          {buying ? 'Bought from' : 'Sold to'} {other?.first_name ?? 'a student'} · {peso(buying ? o.amount + o.fee : o.amount)}
+          {buying ? 'Bought from' : 'Sold to'} {other?.first_name ?? 'a student'} · {peso(buying ? paidTotal(o) : takeHome(o))}
         </Text>
         <View style={{ flexDirection: 'row' }}>
           <Badge label={badge.label} tone={badge.tone} />

@@ -25,7 +25,7 @@ export default function Plus() {
 
   const perks: { icon: IconName; text: string }[] = [
     { icon: 'flash-outline', text: `${settings.plus_boosts} boosts every month for your posts and listings` },
-    { icon: 'pricetag-outline', text: `Service fee drops by ${settings.plus_discount}% (${settings.commission_rate}% → ${Math.max(0, settings.commission_rate - settings.plus_discount)}%)` },
+    { icon: 'pricetag-outline', text: `Your PASA commission drops by ${settings.plus_discount} points (${settings.commission_rate}% → ${Math.max(0, settings.commission_rate - settings.plus_discount)}%)` },
     { icon: 'star-outline', text: 'PASA Plus badge on your profile' },
   ];
 

@@ -8,7 +8,7 @@ import { PromoVideo } from '@/components/landing/PromoVideo';
 import { StoreBadges } from '@/components/landing/StoreBadges';
 import { Logo } from '@/components/Logo';
 import { Loading, Text, type IconName } from '@/components/ui';
-import { CATEGORIES, CONTACT_EMAIL, FACEBOOK_URL, PROGRAMS, SCHOOLS, SUBJECTS } from '@/config';
+import { CONTACT_EMAIL, FACEBOOK_PAGE_NAME, FACEBOOK_URL, PROGRAMS, SCHOOLS } from '@/config';
 import { isInstalledApp } from '@/lib/appMode';
 import { useAuth } from '@/lib/auth';
 import { peso } from '@/lib/format';
@@ -67,11 +67,11 @@ const H7 = 'BricolageGrotesque_700Bold';
 const SCHOOL_NAMES = SCHOOLS.filter((s) => s !== 'Other');
 
 const FAQ = [
-  ['Who can join PASA?', 'College students in Santa Rosa, Laguna. You sign up with your school, program and year, then upload your school ID and COR. The PASA team checks them before you can book, buy or sell.'],
-  ['How do payments work?', 'You pay with GCash or Maya inside the app. PASA holds the money and only releases it to the tutor or seller after you confirm the session happened or you got the item. If it’s cancelled, you’re refunded.'],
+  ['Who can join PASA?', 'College students in Santa Rosa, Laguna. You sign up with your school, program and year, then upload your school ID or COR. The PASA team checks them before you can book, buy or sell.'],
+  ['How do payments work?', 'You pay with GCash, Maya, or Online Banking. PASA holds the money and only releases it to the tutor or seller after you confirm the session happened or you got the item. If it’s cancelled, you’re refunded.'],
   ['How does online tutoring work?', 'Every session is online. You pick Zoom, Google Meet or MS Teams when you book, your tutor sends the meeting link, and you join from your phone or laptop.'],
-  ['What does it cost?', 'Signing up is free. A small service fee is added on top of the tutor’s rate or item price at checkout. PASA Plus members pay a lower fee.'],
-  ['Can I sell reviewers or answer keys?', 'No. Assets is for books, calculators, supplies, lab and drafting tools, uniforms and gadgets. Listings with photos, and anything that looks like answer keys, exercises or quizzes, are checked by an admin first.'],
+  ['What does it cost?', 'Signing up is free.'],
+  ['Can I sell reviewers or answer keys?', 'No. Assets is for books, calculators, supplies, and lab and drafting tools. Listings with photos, and anything that looks like answer keys, exercises or quizzes, are checked by an admin first.'],
   ['How do I become a tutor?', 'Get verified, then apply from your profile with your subjects, rate and CV. Once approved, students can find and book you, and your earnings go to your PASA wallet.'],
 ];
 
@@ -188,7 +188,7 @@ export default function Landing() {
               Turn Potential Into <Text style={{ fontFamily: H7, fontSize: wide ? 26 : tablet ? 24 : 21, color: INK_ON_LIGHT, backgroundColor: P.marker, paddingHorizontal: 4 }}>PASAbilities</Text>.
             </Text>
             <Text style={styles.lead}>
-              PASA is where students tutor students and trade the stuff school makes you buy. Book a tutor for an online session, sell your old books and calculators, and pay safely with GCash or Maya.
+              PASA is where students tutor students and trade the stuff school makes you buy. Book a tutor for an online session, sell your old books and calculators, and pay safely through secured GCash, Maya, and Online Banking.
             </Text>
             <View style={{ flexDirection: 'row', gap: 18, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
               <Btn title="Create a free account" onPress={start} />
@@ -207,10 +207,10 @@ export default function Landing() {
         {/* Numbers */}
         <View style={[section, { marginTop: wide ? 40 : 30 }]}>
           <View style={[styles.stats, { flexDirection: 'row', flexWrap: 'wrap' }]}>
-            <Stat wide={wide || tablet} value={SCHOOL_NAMES.length} label="colleges in Santa Rosa" first />
+            <Stat wide={wide || tablet} value={100} suffix="%" label="protected" first />
+            <Stat wide={wide || tablet} value={0} label="hidden fees on payments" />
+            <Stat wide={wide || tablet} value={1} label="centralized hub" first={!(wide || tablet)} />
             <Stat wide={wide || tablet} value={PROGRAMS.length - 3} suffix="+" label="programs to choose from" />
-            <Stat wide={wide || tablet} value={SUBJECTS.length} suffix="+" label="subjects you can learn or teach" first={!(wide || tablet)} />
-            <Stat wide={wide || tablet} value={CATEGORIES.length} label="kinds of academic items" />
           </View>
         </View>
 
@@ -233,17 +233,17 @@ export default function Landing() {
             <Steps
               title="If you need help"
               steps={[
-                ['Sign up and verify', 'Pick your school and program, then upload your school ID and COR.'],
+                ['Sign up and verify', 'Pick your school and program, then upload your school ID or COR.'],
                 ['Post or browse', 'Say what you’re stuck on, or browse tutors by subject. Search Assets for books and gear.'],
-                ['Book and pay', 'Pick a time and Zoom, Meet or Teams, pay with GCash or Maya, then confirm when it’s done and leave a rating.'],
+                ['Book and pay', 'Choose a time for Zoom, Meet, or Teams, pay securely online, confirm when the session is finished, and leave a rating.'],
               ]}
             />
             <Steps
               title="If you can help"
               steps={[
-                ['Apply to tutor', `Add your subjects, your rate (from ${peso(settings.min_tutor_rate)}/hour) and your CV.`],
+                ['Apply to tutor', `Add your subjects, your rate from ${peso(settings.min_tutor_rate)}/hour and your CV.`],
                 ['Accept bookings', 'Students book a time. Send your Zoom, Meet or Teams link before the session.'],
-                ['Get paid', 'Once the student confirms, your earnings move to your wallet. Withdraw to GCash or Maya.'],
+                ['Get paid', 'Once the student confirms, your earnings move to your wallet. Withdraw to GCash, Maya, and Online Banking.'],
               ]}
             />
           </View>
@@ -274,7 +274,7 @@ export default function Landing() {
             <Text style={styles.label}>Assets</Text>
             <Text style={[styles.h2, { fontSize: wide ? 42 : tablet ? 38 : 30 }]}>The calculator you needed for one sem, someone else needs next sem.</Text>
             <Text style={[styles.body, { marginTop: 16 }]}>
-              Sell books, calculators, lab gowns, drafting sets and uniforms to students nearby. Delivery is arranged between you in chat, and the money is released to the seller once the buyer confirms they got the item.
+              Sell books, calculators and drafting sets to students nearby. Delivery is arranged between you in chat, and the money is released to the seller once the buyer confirms they got the item.
             </Text>
             <Text style={[styles.body, { marginTop: 12 }]}>Listings with photos are checked by an admin first, so answer keys and quizzes stay off PASA.</Text>
           </Reveal>
@@ -282,7 +282,7 @@ export default function Landing() {
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
               <Item icon="calculator-outline" title="Casio fx-991EX ClassWiz" price="₱900" note="Like new" />
               <Item icon="book-outline" title="Cost Accounting, Guerrero" price="₱420" note="Good" />
-              <Item icon="flask-outline" title="Lab Gown (Medium)" price="₱280" note="Like new" />
+              <Item icon="journal-outline" title="Notebook (Set of 3)" price="₱90" note="Brand new" />
               <Item icon="construct-outline" title="Drafting Set + T-square" price="₱250" note="Good" />
             </View>
           </Reveal>
@@ -297,10 +297,10 @@ export default function Landing() {
           <Reveal distance={18} delay={100}>
             <View style={[styles.flow, { flexDirection: wide ? 'row' : 'column' }]}>
               {[
-                ['You pay', `₱150 + ₱${Math.round((150 * settings.commission_rate) / 100)} fee through GCash or Maya.`],
+                ['You pay', 'Pay through GCash, Maya, or Online Banking.'],
                 ['PASA holds it', 'The money waits while the session or handover happens.'],
                 ['You confirm', 'Tap “Session done” or “I received it”. Cancelled? You’re refunded.'],
-                ['They get paid', '₱150 lands in the tutor’s or seller’s wallet.'],
+                ['They get paid', 'The money lands in the tutor’s or seller’s wallet.'],
               ].map(([t, d], i, arr) => (
                 <View key={t} style={{ flex: 1, flexDirection: wide ? 'row' : 'column', alignItems: wide ? 'center' : 'stretch' }}>
                   <View style={styles.flowBox}>
@@ -324,7 +324,7 @@ export default function Landing() {
             <Text style={[styles.h2, { fontSize: wide ? 36 : tablet ? 33 : 28 }]}>Built for students, checked by people.</Text>
             <View style={{ gap: 14, marginTop: 22 }}>
               {[
-                'Everyone is verified with a school ID and COR.',
+                'Everyone is verified with a school ID or COR.',
                 'Tutors are approved with their CV.',
                 'Rude, foul or flirty messages and outside links are blocked.',
                 'Report or block anyone. Banned accounts are logged out right away.',
@@ -356,7 +356,7 @@ export default function Landing() {
             <Text style={styles.label}>PASA Plus</Text>
             <Text style={[styles.h2, { fontSize: wide ? 40 : tablet ? 36 : 30, maxWidth: 760 }]}>For tutors and sellers who want to be seen first.</Text>
             <Text style={[styles.body, { marginTop: 12, maxWidth: 680 }]}>
-              {settings.plus_boosts} boosts a month to pin your posts and listings on top, a service fee that’s {settings.plus_discount} points lower, and a Plus badge. Your first month is free.
+              {settings.plus_boosts} boosts a month to pin your posts and listings on top, a commission that’s {settings.plus_discount} points lower, and a Plus badge. Your first month is free.
             </Text>
           </Reveal>
           <Reveal distance={18} delay={100}>
@@ -413,7 +413,7 @@ export default function Landing() {
           </View>
           <View style={{ flexDirection: 'row', gap: 22, flexWrap: 'wrap' }}>
             <FootLink label="Terms & privacy" onPress={() => open('/legal')} />
-            {!!FACEBOOK_URL && <FootLink label="Facebook" onPress={() => Linking.openURL(FACEBOOK_URL)} />}
+            {!!FACEBOOK_URL && <FootLink label={`Facebook: ${FACEBOOK_PAGE_NAME}`} onPress={() => Linking.openURL(FACEBOOK_URL)} />}
             {!!CONTACT_EMAIL && <FootLink label={CONTACT_EMAIL} onPress={() => Linking.openURL(`mailto:${CONTACT_EMAIL}`)} />}
             <FootLink label="Admin" onPress={() => open('/admin')} />
           </View>
@@ -573,6 +573,8 @@ function Pinned({ children, rotate, delay, style }: { children: ReactNode; rotat
 }
 
 function Board({ wide }: { wide: boolean }) {
+  const { settings } = useSettings();
+  const fee = Math.round((150 * settings.commission_rate) / 100); // the commission is taken out of the tutor's ₱150
   const P = usePal();
   const styles = useStyles();
   return (
@@ -614,13 +616,12 @@ function Board({ wide }: { wide: boolean }) {
       </Pinned>
       <Pinned rotate={-1.5} delay={550} style={{ top: wide ? 300 : 480, left: wide ? 20 : 0, width: wide ? 280 : 250 }}>
         <View style={[styles.note, { gap: 8 }]}>
-          <Text style={{ fontFamily: H7, fontSize: 15, color: P.green }}>✓ Booking paid</Text>
-          <Text style={styles.noteName}>Cost Accounting with Miguel</Text>
-          <Text style={styles.noteMeta}>Thu, 3:00 PM · 1 hour · Zoom</Text>
+          <Text style={{ fontFamily: H7, fontSize: 15, color: P.green }}>Tutor / Seller’s view</Text>
+          <Text style={styles.noteName}>Earnings breakdown</Text>
           <View style={{ height: 1, backgroundColor: P.rule, marginVertical: 4 }} />
-          <Row k="Tutor fee" v="₱150" />
-          <Row k="Service fee" v="₱15" />
-          <Row k="Total · GCash" v="₱165" bold />
+          <Row k="Student payment" v="₱150.00" />
+          <Row k={`App commission (${settings.commission_rate}%)`} v={`-₱${fee.toFixed(2)}`} />
+          <Row k="Net payout" v={`₱${(150 - fee).toFixed(2)}`} bold />
         </View>
       </Pinned>
     </View>

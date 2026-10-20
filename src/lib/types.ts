@@ -95,6 +95,8 @@ export type Booking = {
   status: BookingStatus;
   /** When the tutor confirmed the session took place. After this the student can no longer cancel. */
   delivered_at: string | null;
+  /** true on older records (the fee was added on top of the price); false when the fee is taken from the tutor's pay. */
+  fee_on_top: boolean;
   created_at: string;
   student?: Profile;
   tutor?: Profile;
@@ -114,6 +116,8 @@ export type Order = {
   due_at: string | null;
   /** When the seller confirmed they handed the item over. After this the buyer can no longer cancel. */
   delivered_at: string | null;
+  /** true on older records (the fee was added on top of the price); false when the fee is taken from the seller's pay. */
+  fee_on_top: boolean;
   created_at: string;
   listing?: Listing;
   buyer?: Profile;
@@ -145,7 +149,9 @@ export type Payout = {
   id: string;
   user_id: string;
   amount: number;
-  method: 'gcash' | 'maya';
+  method: 'gcash' | 'maya' | 'online_banking';
+  /** Which bank, for Online Banking withdrawals. */
+  bank?: string | null;
   account_name: string;
   account_number: string;
   status: 'requested' | 'paid' | 'rejected';

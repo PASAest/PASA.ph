@@ -53,7 +53,7 @@ export default function BookTutor() {
   if (!tutor) return <Screen back title="Book a session"><Loading /></Screen>;
 
   const amount = Math.round((tutor.tutor_rate * duration) / 60);
-  const fee = serviceFee(amount, settings, me);
+  const fee = serviceFee(amount, settings, tutor); // PASA's commission, taken from the tutor's pay
 
   // On today, times earlier than the booking cut-off are shown as passed.
   const now = new Date();
@@ -88,6 +88,7 @@ export default function BookTutor() {
       notes: notes.trim(),
       amount,
       fee,
+      fee_on_top: false,
     });
     setSaving(false);
     if (error) return notify('Could not book', error.message);
@@ -155,17 +156,13 @@ export default function BookTutor() {
           <Text variant="muted">Tutor fee ({duration / 60} hr)</Text>
           <Text>{peso(amount)}</Text>
         </Row>
-        <Row style={{ justifyContent: 'space-between' }}>
-          <Text variant="muted">PASA service fee</Text>
-          <Text>{peso(fee)}</Text>
-        </Row>
         <Divider />
         <Row style={{ justifyContent: 'space-between' }}>
           <Text variant="title">Total</Text>
-          <Text style={{ fontFamily: font.black, fontSize: 18, color: colors.primaryDark }}>{peso(amount + fee)}</Text>
+          <Text style={{ fontFamily: font.black, fontSize: 18, color: colors.primaryDark }}>{peso(amount)}</Text>
         </Row>
         <Text variant="muted" style={{ fontSize: 12.5 }}>
-          You won't be charged yet. Free cancellation until {CANCEL_CUTOFF_MIN} minutes before the session.
+          You pay the tutor’s rate, with no extra fees. You won't be charged yet. Free cancellation until {CANCEL_CUTOFF_MIN} minutes before the session.
         </Text>
       </Card>
     </Screen>

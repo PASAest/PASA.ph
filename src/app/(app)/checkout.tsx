@@ -7,7 +7,7 @@ import { Screen } from '@/components/Screen';
 import { Button, Card, DemoBanner, Divider, Loading, Row, Text } from '@/components/ui';
 import { notify } from '@/lib/actions';
 import { requireVerified, useMe } from '@/lib/auth';
-import { dateTime, daysFromNow, extendFrom, fullName, isPlus, peso, referenceNo } from '@/lib/format';
+import { dateTime, daysFromNow, extendFrom, fullName, isPlus, peso, referenceNo, takeHome } from '@/lib/format';
 import { PLUS_PLANS, serviceFee, useSettings } from '@/lib/settings';
 import { supabase } from '@/lib/supabase';
 import type { Booking, Listing } from '@/lib/types';
@@ -51,6 +51,9 @@ export default function Checkout() {
     }
   }, [params.type, params.id, params.listingId]);
 
+  // The price of 30 more minutes with this tutor.
+  const extendBy = booking ? Math.round((booking.amount * 30) / booking.duration_min) : 0;
+
   const summary = ((): Summary | null => {
     switch (params.type) {
       case 'booking': {
@@ -60,27 +63,25 @@ export default function Checkout() {
           subtitle: `${dateTime(booking.starts_at)} · ${booking.mode === 'online' ? `Online via ${booking.platform}` : booking.location}`,
           lines: [
             { label: `Tutor fee (${booking.duration_min / 60} hr)`, amount: booking.amount },
-            { label: 'PASA service fee', amount: booking.fee },
+            ...(booking.fee_on_top === false ? [] : [{ label: 'PASA service fee', amount: booking.fee }]),
           ],
           fee: booking.fee,
-          payeeAmount: booking.amount,
+          payeeAmount: takeHome(booking),
           payeeId: booking.tutor_id,
           refType: 'booking',
         };
       }
       case 'extend': {
         if (!booking) return null;
-        const extra = Math.round((booking.amount * 30) / booking.duration_min);
-        const fee = serviceFee(extra, settings, me);
+        const extra = extendBy;
+        const fee = serviceFee(extra, settings, booking.tutor);
+        const onTop = booking.fee_on_top !== false;
         return {
           title: `Extend ${booking.subject} by 30 minutes`,
           subtitle: `With ${fullName(booking.tutor)}`,
-          lines: [
-            { label: 'Extra 30 minutes', amount: extra },
-            { label: 'PASA service fee', amount: fee },
-          ],
+          lines: [{ label: 'Extra 30 minutes', amount: extra }, ...(onTop ? [{ label: 'PASA service fee', amount: fee }] : [])],
           fee,
-          payeeAmount: extra,
+          payeeAmount: onTop ? extra : extra - fee,
           payeeId: booking.tutor_id,
           refType: 'booking',
         };
@@ -88,16 +89,13 @@ export default function Checkout() {
       case 'order': {
         if (!listing) return null;
         const amount = listing.price;
-        const fee = serviceFee(amount, settings, me);
+        const fee = serviceFee(amount, settings, listing.seller);
         return {
           title: listing.title,
           subtitle: `Buy from ${fullName(listing.seller)} · delivery by arrangement`,
-          lines: [
-            { label: 'Item price', amount },
-            { label: 'PASA service fee', amount: fee },
-          ],
+          lines: [{ label: 'Item price', amount }],
           fee,
-          payeeAmount: amount,
+          payeeAmount: amount - fee,
           payeeId: listing.seller_id,
           refType: 'order',
         };
@@ -116,7 +114,7 @@ export default function Checkout() {
         const plan = PLUS_PLANS.find((p) => String(p.months) === params.months) ?? PLUS_PLANS[0];
         return {
           title: `PASA Plus · ${plan.label}`,
-          subtitle: `${settings.plus_boosts * plan.months} boosts, ${settings.plus_discount}% lower service fee, Plus badge`,
+          subtitle: `${settings.plus_boosts * plan.months} boosts, ${settings.plus_discount}% lower commission, Plus badge`,
           lines: [{ label: 'Subscription', amount: settings[plan.key] }],
           fee: 0,
           payeeAmount: null,
@@ -141,7 +139,7 @@ export default function Checkout() {
       } else if (params.type === 'extend' && booking) {
         const { error } = await supabase
           .from('bookings')
-          .update({ duration_min: booking.duration_min + 30, amount: booking.amount + (summary.payeeAmount ?? 0), fee: booking.fee + summary.fee })
+          .update({ duration_min: booking.duration_min + 30, amount: booking.amount + extendBy, fee: booking.fee + summary.fee })
           .eq('id', booking.id);
         if (error) throw error;
       } else if (params.type === 'order' && listing) {
@@ -156,9 +154,10 @@ export default function Checkout() {
             seller_id: listing.seller_id,
             kind: 'buy',
             weeks: 0,
-            amount: summary.payeeAmount,
+            amount: listing.price,
             deposit: 0,
             fee: summary.fee,
+            fee_on_top: false,
           })
           .select('id')
           .single();
@@ -234,6 +233,11 @@ export default function Checkout() {
           <Text style={{ fontFamily: font.black, fontSize: 20, color: colors.primaryDark }}>{peso(total)}</Text>
         </Row>
       </Card>
+      {summary.payeeId && (params.type === 'order' || (booking && booking.fee_on_top === false)) && (
+        <Text variant="muted" style={{ fontSize: 12.5 }}>
+          You pay the listed price. PASA’s commission comes out of the {params.type === 'order' ? 'seller' : 'tutor'}’s earnings.
+        </Text>
+      )}
       <Text variant="label">Pay with</Text>
       {(Object.keys(METHODS) as PayMethod[]).map((k) => (
         <Pressable key={k} onPress={() => setMethod(k)}>

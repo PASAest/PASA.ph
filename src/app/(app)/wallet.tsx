@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { View } from 'react-native';
-import { METHODS } from '@/components/FakeWallet';
+import { METHODS, type PayMethod } from '@/components/FakeWallet';
 import { Screen } from '@/components/Screen';
 import { SelectField } from '@/components/SelectField';
 import { WalletLock } from '@/components/WalletLock';
 import { Badge, Button, Card, DemoBanner, Empty, Field, Loading, Row, Text } from '@/components/ui';
+import { BANKS } from '@/config';
 import { notify } from '@/lib/actions';
 import { useMe } from '@/lib/auth';
 import { dateTime, fullName, peso } from '@/lib/format';
@@ -29,7 +30,7 @@ type Earning = {
 /** What the tutor/seller earns from one payment (older payments didn't store it, so estimate). */
 const earned = (p: Earning) => p.payee_amount ?? p.amount - p.fee;
 
-// Tutor's / seller's wallet: earnings released by PASA, pending payments, and withdrawals to GCash or Maya (demo).
+// Tutor's / seller's wallet: earnings released by PASA, pending payments, and withdrawals to GCash, Maya or Online Banking (demo).
 // Opens only after the wallet PIN.
 export default function Wallet() {
   return <WalletLock>{(changePin) => <WalletContent changePin={changePin} />}</WalletLock>;
@@ -40,8 +41,10 @@ function WalletContent({ changePin }: { changePin: () => void }) {
   const [earnings, setEarnings] = useState<Earning[] | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [withdrawing, setWithdrawing] = useState(false);
-  const [method, setMethod] = useState<'gcash' | 'maya'>('gcash');
+  const [method, setMethod] = useState<PayMethod>('gcash');
+  const [bank, setBank] = useState<string | null>(null);
   const [form, setForm] = useState({ amount: '', name: `${me.first_name} ${me.last_name}`, number: '' });
+  const banking = method === 'online_banking';
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
@@ -68,11 +71,17 @@ function WalletContent({ changePin }: { changePin: () => void }) {
     const amount = Number(form.amount);
     if (!amount || amount < 100) return notify('Minimum withdrawal is ₱100');
     if (amount > available) return notify('Not enough balance', `You can withdraw up to ${peso(available)}.`);
-    if (!form.name.trim() || !/^09\d{9}$/.test(form.number.replace(/\s/g, ''))) return notify('Check your account', `Enter the name and 11-digit mobile number on your ${METHODS[method].label} account.`);
+    const number = form.number.replace(/[\s-]/g, '');
+    if (banking) {
+      if (!bank) return notify('Choose your bank');
+      if (!form.name.trim() || !/^\d{8,20}$/.test(number)) return notify('Check your account', 'Enter the account name and your bank account number (digits only).');
+    } else if (!form.name.trim() || !/^09\d{9}$/.test(number)) {
+      return notify('Check your account', `Enter the name and 11-digit mobile number on your ${METHODS[method].label} account.`);
+    }
     setSaving(true);
     const { error } = await supabase
       .from('payouts')
-      .insert({ user_id: me.id, amount, method, account_name: form.name.trim(), account_number: form.number.replace(/\s/g, '') });
+      .insert({ user_id: me.id, amount, method, bank: banking ? bank : null, account_name: form.name.trim(), account_number: number });
     setSaving(false);
     if (error) return notify('Could not request withdrawal', error.message);
     setWithdrawing(false);
@@ -92,7 +101,7 @@ function WalletContent({ changePin }: { changePin: () => void }) {
         </Text>
       </Card>
       {!withdrawing ? (
-        <Button title="Withdraw to GCash or Maya" icon="arrow-up-circle-outline" onPress={() => setWithdrawing(true)} disabled={available < 100} />
+        <Button title="Withdraw to GCash, Maya or a bank" icon="arrow-up-circle-outline" onPress={() => setWithdrawing(true)} disabled={available < 100} />
       ) : (
         <Card style={{ gap: space(3) }}>
           <Text variant="title">Withdraw</Text>
@@ -100,11 +109,20 @@ function WalletContent({ changePin }: { changePin: () => void }) {
             label="Send to"
             value={method}
             onChange={setMethod}
-            options={(['gcash', 'maya'] as const).map((m) => ({ value: m, label: METHODS[m].label, icon: 'wallet-outline' as const }))}
+            options={(Object.keys(METHODS) as PayMethod[]).map((m) => ({ value: m, label: METHODS[m].label, icon: (m === 'online_banking' ? 'business-outline' : 'wallet-outline') as 'wallet-outline' }))}
           />
+          {banking && (
+            <SelectField label="Bank" icon="business-outline" placeholder="Choose your bank" searchable value={bank} onChange={setBank} options={BANKS.map((b) => ({ value: b, label: b }))} />
+          )}
           <Field label="Amount" placeholder={`Up to ${peso(available)}`} value={form.amount} onChangeText={(v) => setForm((f) => ({ ...f, amount: v.replace(/\D/g, '') }))} keyboardType="number-pad" icon="cash-outline" />
           <Field label="Account name" value={form.name} onChangeText={(v) => setForm((f) => ({ ...f, name: v }))} />
-          <Field label="Mobile number" placeholder="09XX XXX XXXX" value={form.number} onChangeText={(v) => setForm((f) => ({ ...f, number: v }))} keyboardType="phone-pad" />
+          <Field
+            label={banking ? 'Account number' : 'Mobile number'}
+            placeholder={banking ? 'Your bank account number' : '09XX XXX XXXX'}
+            value={form.number}
+            onChangeText={(v) => setForm((f) => ({ ...f, number: v }))}
+            keyboardType={banking ? 'number-pad' : 'phone-pad'}
+          />
           <Row>
             <Button title="Request" style={{ flex: 1 }} onPress={withdraw} loading={saving} />
             <Button title="Cancel" variant="ghost" onPress={() => setWithdrawing(false)} />
@@ -124,7 +142,7 @@ function WalletContent({ changePin }: { changePin: () => void }) {
               <Ionicons name="arrow-up-circle" size={26} color={colors.primary} />
               <View style={{ flex: 1 }}>
                 <Text style={{ fontFamily: font.bold }}>
-                  {peso(p.amount)} to {METHODS[p.method].label}
+                  {peso(p.amount)} to {p.bank ? `${p.bank} · ` : ''}{METHODS[p.method].label}
                 </Text>
                 <Text variant="muted">{dateTime(p.created_at)}</Text>
               </View>

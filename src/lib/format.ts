@@ -9,6 +9,12 @@ export const yearLabel = (y: number) => `${y}${['st', 'nd', 'rd'][y - 1] ?? 'th'
 
 export { isPlus } from './settings';
 
+type Priced = { amount: number; fee: number; fee_on_top?: boolean };
+/** What the buyer or student pays in total. Older records added the fee on top; newer ones charge the listed price. */
+export const paidTotal = (x: Priced) => (x.fee_on_top === false ? x.amount : x.amount + x.fee);
+/** What the tutor or seller receives. Newer records take the commission out of their pay. */
+export const takeHome = (x: Priced) => (x.fee_on_top === false ? x.amount - x.fee : x.amount);
+
 export function timeAgo(iso: string) {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
   if (s < 60) return 'just now';

@@ -11,9 +11,9 @@ type Key = keyof AppSettings;
 const GROUPS: { title: string; note: string; fields: { key: Key; label: string; suffix: string }[] }[] = [
   {
     title: 'Commission and pricing',
-    note: 'The service fee is added on top of the tutor’s or seller’s price. Tutors set their own rate but can’t go below the minimum.',
+    note: 'The commission is taken out of the tutor’s or seller’s pay; the student or buyer pays the listed price. Tutors set their own rate but can’t go below the minimum.',
     fields: [
-      { key: 'commission_rate', label: 'Service fee (commission)', suffix: '%' },
+      { key: 'commission_rate', label: 'Commission (taken from the tutor’s or seller’s pay)', suffix: '%' },
       { key: 'min_tutor_rate', label: 'Minimum tutor rate', suffix: '₱ / hour' },
     ],
   },
@@ -27,9 +27,9 @@ const GROUPS: { title: string; note: string; fields: { key: Key; label: string; 
   },
   {
     title: 'PASA Plus',
-    note: 'Members get a lower service fee and free boosts each month. New members can try it free for 1 month.',
+    note: 'Members get a lower commission and free boosts each month. New members can try it free for 1 month.',
     fields: [
-      { key: 'plus_discount', label: 'Service fee discount', suffix: 'percentage points' },
+      { key: 'plus_discount', label: 'Commission discount', suffix: 'percentage points' },
       { key: 'plus_boosts', label: 'Boosts per month', suffix: 'boosts' },
       { key: 'plus_price_1m', label: '1 month', suffix: '₱' },
       { key: 'plus_price_3m', label: '3 months', suffix: '₱' },

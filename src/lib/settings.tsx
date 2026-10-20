@@ -64,11 +64,12 @@ export const useSettings = () => useContext(SettingsContext);
 
 export const isPlus = (p?: Profile | null) => !!p?.plus_until && new Date(p.plus_until) > new Date();
 
-/** PASA's service fee rate (%) for this payer: the commission, minus the Plus discount for members. */
-export const feeRate = (s: AppSettings, payer?: Profile | null) =>
-  Math.max(0, s.commission_rate - (isPlus(payer) ? s.plus_discount : 0));
+/** PASA's commission rate (%) for the tutor or seller who earns the money: the base rate, minus the Plus discount for members. */
+export const feeRate = (s: AppSettings, earner?: Profile | null) =>
+  Math.max(0, s.commission_rate - (isPlus(earner) ? s.plus_discount : 0));
 
-export const serviceFee = (amount: number, s: AppSettings, payer?: Profile | null) => Math.round((amount * feeRate(s, payer)) / 100);
+/** The commission on `amount`. It is taken out of the earner's pay; the buyer pays the listed price. */
+export const serviceFee = (amount: number, s: AppSettings, earner?: Profile | null) => Math.round((amount * feeRate(s, earner)) / 100);
 
 export const PLUS_PLANS = [
   { months: 1, label: '1 month', key: 'plus_price_1m' },

@@ -457,6 +457,20 @@ create trigger orders_no_rent before insert on public.orders
 delete from public.listings l
 where l.mode = 'rent' and not exists (select 1 from public.orders o where o.listing_id = l.id);
 
+-- The commission is now taken out of the tutor's or seller's pay instead of being added on top of the price.
+-- Records made before this change keep the old behaviour (fee_on_top = true); new ones are saved with false.
+--   fee_on_top = true   buyer pays amount + fee, the seller receives amount
+--   fee_on_top = false  buyer pays amount, the seller receives amount - fee
+alter table public.orders add column if not exists fee_on_top boolean not null default true;
+alter table public.bookings add column if not exists fee_on_top boolean not null default true;
+
+-- Online Banking joins GCash and Maya for payments and withdrawals (withdrawals to a bank also record which bank).
+alter table public.payments drop constraint if exists payments_method_check;
+alter table public.payments add constraint payments_method_check check (method in ('gcash', 'maya', 'online_banking', 'cash'));
+alter table public.payouts drop constraint if exists payouts_method_check;
+alter table public.payouts add constraint payouts_method_check check (method in ('gcash', 'maya', 'online_banking'));
+alter table public.payouts add column if not exists bank text;
+
 -- The seller confirms they handed the item over ("Delivery confirmed"). After that the buyer can't cancel any more:
 -- they confirm they received it, or report a problem to the PASA team.
 alter table public.orders add column if not exists delivered_at timestamptz;
@@ -475,7 +489,8 @@ returns trigger language plpgsql as $$
 begin
   if auth.uid() is null or is_admin() then return new; end if;
   if new.buyer_id <> old.buyer_id or new.seller_id <> old.seller_id or new.listing_id <> old.listing_id or new.kind <> old.kind
-     or new.amount <> old.amount or new.fee <> old.fee or new.deposit <> old.deposit or new.weeks <> old.weeks then
+     or new.amount <> old.amount or new.fee <> old.fee or new.deposit <> old.deposit or new.weeks <> old.weeks
+     or new.fee_on_top <> old.fee_on_top then
     raise exception 'An order can''t be edited after it''s placed';
   end if;
   -- "Delivery confirmed": only the seller, once, while the order is still paid.
