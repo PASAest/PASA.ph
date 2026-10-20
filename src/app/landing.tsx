@@ -8,7 +8,7 @@ import { PromoVideo } from '@/components/landing/PromoVideo';
 import { StoreBadges } from '@/components/landing/StoreBadges';
 import { Logo } from '@/components/Logo';
 import { Loading, Text, type IconName } from '@/components/ui';
-import { CONTACT_EMAIL, FACEBOOK_PAGE_NAME, FACEBOOK_URL, PROGRAMS, SCHOOLS } from '@/config';
+import { CONTACT_EMAIL, FACEBOOK_PAGE_NAME, FACEBOOK_URL, INSTAGRAM_URL, PROGRAMS, SCHOOLS } from '@/config';
 import { isInstalledApp } from '@/lib/appMode';
 import { useAuth } from '@/lib/auth';
 import { peso } from '@/lib/format';
@@ -406,16 +406,35 @@ export default function Landing() {
         </View>
 
         {/* Footer */}
-        <View style={[section, styles.footer]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Logo size={26} variant={mode} />
-            <Text style={{ color: P.muted }}>© {new Date().getFullYear()} PASA · Turn Potential Into PASAbilities</Text>
-          </View>
-          <View style={{ flexDirection: 'row', gap: 22, flexWrap: 'wrap' }}>
-            <FootLink label="Terms & privacy" onPress={() => open('/legal')} />
-            {!!FACEBOOK_URL && <FootLink label={`Facebook: ${FACEBOOK_PAGE_NAME}`} onPress={() => Linking.openURL(FACEBOOK_URL)} />}
-            {!!CONTACT_EMAIL && <FootLink label={CONTACT_EMAIL} onPress={() => Linking.openURL(`mailto:${CONTACT_EMAIL}`)} />}
-            <FootLink label="Admin" onPress={() => open('/admin')} />
+        <View style={styles.footerBand}>
+          <View style={[section, { paddingVertical: 48, gap: 36 }]}>
+            <View style={{ flexDirection: wide ? 'row' : 'column', gap: wide ? 64 : 40 }}>
+              <View style={{ flex: wide ? 1.4 : undefined, gap: 14 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <Logo size={40} variant="dark" />
+                  <Text style={{ color: '#FFFFFF', fontFamily: HEADING_FONT, fontSize: 26 }}>PASA</Text>
+                </View>
+                <Text style={{ color: '#C6D6E3', fontSize: 15.5, lineHeight: 23, maxWidth: 340 }}>
+                  Turn Potential Into PASAbilities. Tutoring and academic items for college students in Santa Rosa, Laguna.
+                </Text>
+              </View>
+              <View style={{ flex: 1, gap: 12 }}>
+                <Text style={styles.footHead}>Explore</Text>
+                <FootLink label="Terms & privacy" onPress={() => open('/legal')} />
+                <FootLink label="Create a free account" onPress={start} />
+                <FootLink label="Admin" onPress={() => open('/admin')} />
+              </View>
+              <View style={{ flex: 1.3, gap: 12 }}>
+                <Text style={styles.footHead}>Contact</Text>
+                {!!CONTACT_EMAIL && <FootLink label={CONTACT_EMAIL} onPress={() => Linking.openURL(`mailto:${CONTACT_EMAIL}`)} />}
+                <View style={{ flexDirection: 'row', gap: 12, marginTop: 4 }}>
+                  {!!FACEBOOK_URL && <SocialIcon name="logo-facebook" label={`Facebook: ${FACEBOOK_PAGE_NAME}`} url={FACEBOOK_URL} />}
+                  {!!INSTAGRAM_URL && <SocialIcon name="logo-instagram" label="Instagram: @pasaofficial.2026" url={INSTAGRAM_URL} />}
+                </View>
+              </View>
+            </View>
+            <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.18)' }} />
+            <Text style={{ color: '#9DB4C6', fontSize: 13.5 }}>© {new Date().getFullYear()} PASA · Peer Academic Services and Assets. All rights reserved.</Text>
           </View>
         </View>
       </ScrollView>
@@ -439,10 +458,22 @@ function Btn({ title, onPress, small, light }: { title: string; onPress: () => v
   );
 }
 
-function FootLink({ label, onPress }: { label: string; onPress: () => void }) {
-  const P = usePal();
+function SocialIcon({ name, label, url }: { name: 'logo-facebook' | 'logo-instagram'; label: string; url: string }) {
   return (
-    <Text onPress={onPress} style={{ color: P.ink2, fontSize: 14.5 }}>
+    <Pressable
+      onPress={() => Linking.openURL(url)}
+      accessibilityRole="link"
+      accessibilityLabel={label}
+      style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' }}
+    >
+      <Ionicons name={name} size={24} color="#FFFFFF" />
+    </Pressable>
+  );
+}
+
+function FootLink({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Text onPress={onPress} style={{ color: '#FFFFFF', fontSize: 15.5, lineHeight: 22 }}>
       {label}
     </Text>
   );
@@ -705,7 +736,8 @@ const makeStyles = (P: Palette) =>
   plan: { flex: 1, backgroundColor: P.card, borderRadius: 12, padding: 22, gap: 6, borderWidth: 1, borderColor: P.rule },
   faq: { paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: P.rule },
   closing: { backgroundColor: P.band, borderRadius: 18, padding: 40, gap: 24 },
-  footer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 16, paddingVertical: 40 },
+  footerBand: { width: '100%', alignItems: 'center', backgroundColor: '#10283D', marginTop: 90, borderTopWidth: 4, borderTopColor: P.sky },
+  footHead: { color: P.sky, fontSize: 13, letterSpacing: 1.2, textTransform: 'uppercase', fontWeight: '700' },
   note: {
     backgroundColor: P.card,
     borderRadius: 10,

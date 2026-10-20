@@ -100,6 +100,7 @@ export const DELIVERY_NOTE = 'Delivery is by internal arrangement. Agree on how 
 // Landing page links. Fill these in once the group creates them (business email, Facebook page, APK link).
 export const CONTACT_EMAIL = 'pasa.phservices@gmail.com';
 export const FACEBOOK_PAGE_NAME = 'PASA: Peer Academic Services and Assets';
+export const INSTAGRAM_URL = 'https://www.instagram.com/pasaofficial.2026/';
 export const FACEBOOK_URL = 'https://www.facebook.com/profile.php?id=61594780997769';
 
 // Banks offered for Online Banking payments and withdrawals.
