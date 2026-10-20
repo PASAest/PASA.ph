@@ -54,14 +54,14 @@ export default function Payments() {
         .limit(1000),
       supabase.from('payouts').select('*, user:profiles!payouts_user_id_fkey(*)').order('created_at', { ascending: false }),
       supabase.from('orders').select('id, status, delivered_at'),
-      supabase.from('bookings').select('id, status'),
+      supabase.from('bookings').select('id, status, delivered_at'),
     ]);
     const map: Record<string, string> = {};
     for (const r of (o.data ?? []) as { id: string; status: string; delivered_at: string | null }[]) {
       map[r.id] = r.status === 'completed' ? 'Received ✓' : r.status === 'cancelled' ? 'Cancelled' : r.delivered_at ? 'Delivered · waiting for buyer' : 'Waiting for delivery';
     }
-    for (const r of (b.data ?? []) as { id: string; status: string }[]) {
-      map[r.id] = r.status === 'completed' ? 'Session done ✓' : ['cancelled', 'declined'].includes(r.status) ? 'Cancelled' : r.status === 'paid' ? 'Confirmed · upcoming' : 'Not paid yet';
+    for (const r of (b.data ?? []) as { id: string; status: string; delivered_at: string | null }[]) {
+      map[r.id] = r.status === 'completed' ? 'Session done ✓' : ['cancelled', 'declined'].includes(r.status) ? 'Cancelled' : r.status === 'paid' ? (r.delivered_at ? 'Session held · waiting for student' : 'Confirmed · upcoming') : 'Not paid yet';
     }
     setProgress(map);
     setPayments((p.data as Payment[]) ?? []);

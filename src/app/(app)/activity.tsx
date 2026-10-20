@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Linking, ScrollView, View } from 'react-native';
 import { Screen } from '@/components/Screen';
@@ -36,7 +36,8 @@ const ORDER_STATUS: Record<Order['status'], { label: string; tone: 'yellow' | 'b
 // 3.6 · My Activity: tutoring sessions and item orders, with the next step for each
 export default function Activity() {
   const { me } = useMe();
-  const [tab, setTab] = useState<Tab>('sessions');
+  const { tab: startTab } = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState<Tab>(startTab === 'orders' ? 'orders' : 'sessions');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [reviewed, setReviewed] = useState<Set<string>>(new Set());
@@ -119,16 +120,27 @@ function BookingCard({ booking: b, me, reviewed, onChange }: { booking: Booking;
   const other = isTutor ? b.student : b.tutor;
   const now = useNow();
   const minutesToStart = (new Date(b.starts_at).getTime() - now) / 60000;
-  const canCancel = ['requested', 'accepted', 'paid'].includes(b.status) && minutesToStart > CANCEL_CUTOFF_MIN;
+  const delivered = !!b.delivered_at;
+  const canCancel = ['requested', 'accepted', 'paid'].includes(b.status) && minutesToStart > CANCEL_CUTOFF_MIN && !delivered;
   const startsSoon = b.status === 'paid' && minutesToStart <= 60 && minutesToStart > -b.duration_min;
   const started = minutesToStart <= 0;
-  const status = BOOKING_STATUS[b.status];
+  const status =
+    b.status === 'paid' && delivered
+      ? { label: isTutor ? 'Session held · waiting for student' : 'Session held · confirm to pay', tone: 'blue' as const }
+      : BOOKING_STATUS[b.status];
 
   const update = async (status: BookingStatus) => {
     const { error } = await supabase.from('bookings').update({ status }).eq('id', b.id);
     if (error) return notify('Something went wrong', error.message);
     if (status === 'completed') await setPaymentStatus(b.id, 'released');
     if (status === 'cancelled') await setPaymentStatus(b.id, 'refunded');
+    onChange();
+  };
+
+  const confirmSession = async () => {
+    const { error } = await supabase.from('bookings').update({ delivered_at: new Date().toISOString() }).eq('id', b.id);
+    if (error) return notify('Could not confirm', error.message);
+    toast('Session confirmed. The student was asked to confirm and pay.');
     onChange();
   };
 
@@ -162,6 +174,12 @@ function BookingCard({ booking: b, me, reviewed, onChange }: { booking: Booking;
         </Text>
       </Row>
       {!!b.notes && <Text variant="muted">“{b.notes}”</Text>}
+      {delivered && (
+        <Row>
+          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+          <Text variant="muted">Tutor confirmed the session · {dateTime(b.delivered_at!)}</Text>
+        </Row>
+      )}
 
       {startsSoon && (
         <View style={{ backgroundColor: colors.warningSoft, borderRadius: 10, padding: 10, flexDirection: 'row', gap: 8 }}>
@@ -190,6 +208,25 @@ function BookingCard({ booking: b, me, reviewed, onChange }: { booking: Booking;
             <Button title="Accept" small icon="checkmark" onPress={() => update('accepted')} />
             <Button title="Decline" small variant="danger" onPress={() => update('declined')} />
           </>
+        )}
+        {isTutor && b.status === 'paid' && !delivered && started && (
+          <Button
+            title="Session completed"
+            small
+            icon="checkmark-circle-outline"
+            onPress={async () => {
+              if (await confirm('Session took place?', 'Only confirm after you tutored the student. They’ll be asked to confirm and pay, and they can’t cancel after this.', 'Yes, completed')) confirmSession();
+            }}
+          />
+        )}
+        {!isTutor && b.status === 'paid' && delivered && other && (
+          <Button
+            title="Report a problem"
+            small
+            variant="outline"
+            icon="flag-outline"
+            onPress={() => router.push({ pathname: '/report', params: { type: 'user', id: other.id } })}
+          />
         )}
         {!isTutor && b.status === 'accepted' && (
           <Button title="Pay now" small icon="wallet-outline" onPress={() => router.push({ pathname: '/checkout', params: { type: 'booking', id: b.id } })} />

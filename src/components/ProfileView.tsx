@@ -8,10 +8,10 @@ import { toast } from '@/lib/toast';
 import { isPlus, peso, shortDate, yearLabel } from '@/lib/format';
 import { PRESENCE_LABEL, useStatuses } from '@/lib/presence';
 import { supabase } from '@/lib/supabase';
-import type { Listing, Profile, Rating, Review } from '@/lib/types';
+import type { Listing, Order, Profile, Rating, Review } from '@/lib/types';
 import { useFocusLoad } from '@/lib/useFocusLoad';
 import { colors, font, space, themed } from '@/theme';
-import { ListingCard } from './ListingCard';
+import { ListingCard, ListingPhoto } from './ListingCard';
 import { MenuSheet } from './MenuSheet';
 import { useGridColumns } from '@/lib/layout';
 import { StatusDot } from './StatusDot';
@@ -23,6 +23,8 @@ type Data = {
   ratings: Rating[];
   reviews: Review[];
   listings: Listing[];
+  /** My own item orders, as buyer or seller (empty on other people's profiles). */
+  orders: Order[];
   connections: number;
   /** Between me and this student: none, a request I sent, a request they sent, or connected. */
   link: 'none' | 'sent' | 'received' | 'connected';
@@ -33,11 +35,18 @@ export function useProfileData(userId: string) {
   const { me } = useMe();
   const [data, setData] = useState<Data | null>(null);
   const load = async () => {
-    const [p, r, rv, l, c, mine] = await Promise.all([
+    const [p, r, rv, l, ord, c, mine] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', userId).single(),
       supabase.from('profile_ratings').select('*').eq('user_id', userId),
       supabase.from('reviews').select('*, reviewer:profiles!reviews_reviewer_id_fkey(*)').eq('reviewee_id', userId).order('created_at', { ascending: false }).limit(5),
       supabase.from('listings').select('*').eq('seller_id', userId).order('created_at', { ascending: false }),
+      userId === me.id
+        ? supabase
+            .from('orders')
+            .select('*, listing:listings(*), buyer:profiles!orders_buyer_id_fkey(*), seller:profiles!orders_seller_id_fkey(*)')
+            .order('created_at', { ascending: false })
+            .limit(20)
+        : Promise.resolve({ data: [] as Order[] }),
       supabase.from('connections').select('follower_id', { count: 'exact', head: true }).eq('status', 'accepted').or(`follower_id.eq.${userId},following_id.eq.${userId}`),
       supabase
         .from('connections')
@@ -52,6 +61,7 @@ export function useProfileData(userId: string) {
       ratings: (r.data as Rating[]) ?? [],
       reviews: (rv.data as Review[]) ?? [],
       listings: (l.data as Listing[]) ?? [],
+      orders: (ord.data as Order[]) ?? [],
       connections: c.count ?? 0,
       link: !mine.data ? 'none' : mine.data.status === 'accepted' ? 'connected' : mine.data.follower_id === me.id ? 'sent' : 'received',
     });
@@ -69,7 +79,7 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
   const [shownLink, setShownLink] = useState<Data['link'] | null>(null);
   const statuses = useStatuses([data?.profile.id]);
   if (!data) return <Loading />;
-  const { profile: p, ratings, reviews, listings, connections } = data;
+  const { profile: p, ratings, reviews, listings, orders, connections } = data;
   const link = shownLink ?? data.link;
   const refresh = async () => {
     await reload();
@@ -273,10 +283,25 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
         </Card>
       )}
 
+      {/* My orders: items I bought or sold, so they're easy to find */}
+      {isMe && (
+        <View style={{ gap: space(3) }}>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <Text variant="title">My orders</Text>
+            <Button title="See all" small variant="ghost" onPress={() => router.push({ pathname: '/activity', params: { tab: 'orders' } })} />
+          </Row>
+          {orders.length === 0 ? (
+            <Text variant="muted">Items you buy or sell will show up here, with what to do next.</Text>
+          ) : (
+            orders.slice(0, 5).map((o) => <OrderRow key={o.id} order={o} meId={me.id} />)
+          )}
+        </View>
+      )}
+
       {/* Listings */}
       <View style={{ gap: space(3) }}>
         <Row style={{ justifyContent: 'space-between' }}>
-          <Text variant="title">Listings</Text>
+          <Text variant="title">{isMe ? 'My listings' : 'Listings'}</Text>
           {isMe && <Button title="Add" icon="add" small variant="ghost" onPress={() => router.push('/listing/new')} />}
         </Row>
         {listings.length === 0 ? (
@@ -305,6 +330,42 @@ export function ProfileView({ data, reload }: { data: Data | null; reload: () =>
         ]}
       />
     </View>
+  );
+}
+
+/** One of my item orders, with whose it is and what happens next. */
+function OrderRow({ order: o, meId }: { order: Order; meId: string }) {
+  const buying = o.buyer_id === meId;
+  const other = buying ? o.seller : o.buyer;
+  const delivered = !!o.delivered_at;
+  const badge: { label: string; tone: 'yellow' | 'blue' | 'green' | 'red' } =
+    o.status === 'completed'
+      ? { label: buying ? 'Received' : 'Sold', tone: 'green' }
+      : o.status === 'cancelled'
+        ? { label: 'Cancelled', tone: 'red' }
+        : buying
+          ? delivered
+            ? { label: 'Confirm receipt', tone: 'blue' }
+            : { label: 'Waiting for seller', tone: 'yellow' }
+          : delivered
+            ? { label: 'Waiting for buyer', tone: 'blue' }
+            : { label: 'To deliver', tone: 'yellow' };
+  return (
+    <Card onPress={() => router.push({ pathname: '/activity', params: { tab: 'orders' } })} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: space(3) }}>
+      <View style={{ width: 64, height: 64, borderRadius: 14, overflow: 'hidden' }}>{o.listing && <ListingPhoto listing={o.listing} height={64} />}</View>
+      <View style={{ flex: 1, gap: 3 }}>
+        <Text variant="title" numberOfLines={1}>
+          {o.listing?.title ?? 'Item'}
+        </Text>
+        <Text variant="muted" numberOfLines={1} style={{ fontSize: 13 }}>
+          {buying ? 'Bought from' : 'Sold to'} {other?.first_name ?? 'a student'} · {peso(buying ? o.amount + o.fee : o.amount)}
+        </Text>
+        <View style={{ flexDirection: 'row' }}>
+          <Badge label={badge.label} tone={badge.tone} />
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+    </Card>
   );
 }
 

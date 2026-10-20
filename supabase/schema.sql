@@ -460,6 +460,8 @@ where l.mode = 'rent' and not exists (select 1 from public.orders o where o.list
 -- The seller confirms they handed the item over ("Delivery confirmed"). After that the buyer can't cancel any more:
 -- they confirm they received it, or report a problem to the PASA team.
 alter table public.orders add column if not exists delivered_at timestamptz;
+-- Same for tutoring: the tutor confirms the session took place ("Session completed"). The student can't cancel after that.
+alter table public.bookings add column if not exists delivered_at timestamptz;
 
 -- ─────────────────────────────────────────────────────────────
 -- Orders, bookings and payments follow fixed steps, so nobody can cancel or change a deal after it's done:
@@ -501,17 +503,35 @@ drop trigger if exists orders_guard on public.orders;
 create trigger orders_guard before update on public.orders
   for each row execute function public.guard_order();
 
--- A tutoring booking that is finished, cancelled or declined can't change, and only the student can mark it done.
+-- Tutoring bookings follow fixed steps too:
+--   the tutor confirms the session took place (once the start time has passed); only the student marks it done and pays out;
+--   a paid session can be cancelled until 15 minutes before it starts (the student) and never after the tutor confirmed it;
+--   finished, cancelled or declined bookings can't change.
 create or replace function public.guard_booking()
 returns trigger language plpgsql as $$
 begin
   if auth.uid() is null or is_admin() then return new; end if;
+  if new.delivered_at is distinct from old.delivered_at then
+    if old.delivered_at is not null then raise exception 'The session was already confirmed'; end if;
+    if auth.uid() <> old.tutor_id then raise exception 'Only the tutor can confirm the session took place'; end if;
+    if old.status <> 'paid' or new.status <> old.status then raise exception 'This booking is %, so it can''t be changed', old.status; end if;
+    if now() < old.starts_at then raise exception 'The session hasn''t started yet'; end if;
+    new.delivered_at := now();
+  end if;
   if new.status is distinct from old.status then
     if old.status in ('completed', 'cancelled', 'declined') then
       raise exception 'This booking is already %, so it can''t be changed', old.status;
     end if;
     if new.status = 'completed' and auth.uid() <> old.student_id then
       raise exception 'Only the student can mark a session as done';
+    end if;
+    if new.status = 'cancelled' and old.status = 'paid' then
+      if old.delivered_at is not null then
+        raise exception 'The tutor already confirmed the session took place. Confirm it, or report a problem.';
+      end if;
+      if auth.uid() = old.student_id and now() > old.starts_at - interval '15 minutes' then
+        raise exception 'A session can only be cancelled until 15 minutes before it starts';
+      end if;
     end if;
   end if;
   return new;
@@ -524,6 +544,7 @@ create trigger bookings_guard before update on public.bookings
 -- item was received or the session marked done.
 create or replace function public.guard_payment()
 returns trigger language plpgsql security definer set search_path = public as $$
+declare ref_status text;
 begin
   if auth.uid() is null or is_admin() then return new; end if;
   if new.payer_id <> old.payer_id or new.payee_id is distinct from old.payee_id or new.ref_type <> old.ref_type
@@ -533,12 +554,17 @@ begin
   end if;
   if new.status is distinct from old.status then
     if old.status <> 'held' then raise exception 'This payment is already %, so it can''t be changed', old.status; end if;
+    -- Held money only moves after its order or booking did (and those have their own rules above).
+    select case old.ref_type
+             when 'order' then (select status from orders where id = old.ref_id)
+             when 'booking' then (select status from bookings where id = old.ref_id)
+           end into ref_status;
     if new.status = 'released' then
       if auth.uid() <> old.payer_id then raise exception 'Only the payer can release a payment'; end if;
+      if ref_status is distinct from 'completed' then raise exception 'The payment is released once the item is received or the session is done'; end if;
     elsif new.status = 'refunded' then
-      if (old.ref_type = 'order' and exists (select 1 from orders where id = old.ref_id and status = 'completed'))
-         or (old.ref_type = 'booking' and exists (select 1 from bookings where id = old.ref_id and status = 'completed')) then
-        raise exception 'The item was already received, so this payment can''t be refunded';
+      if ref_status is null or ref_status not in ('cancelled', 'declined') then
+        raise exception 'A payment is only refunded when its order or booking is cancelled';
       end if;
     else
       raise exception 'A payment can only be released or refunded';
@@ -732,6 +758,9 @@ create trigger messages_after_insert after insert on public.messages
 create or replace function public.on_booking()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
+  if tg_op = 'UPDATE' and new.delivered_at is not null and old.delivered_at is null then
+    perform notify(new.student_id, 'Session completed', display_name(new.tutor_id) || ' says the ' || new.subject || ' session took place. Tap "Session done" to pay them.', '/activity');
+  end if;
   if tg_op = 'INSERT' then
     perform notify(new.tutor_id, 'New tutoring request',
       display_name(new.student_id) || ' wants help in ' || new.subject, '/activity');
@@ -746,9 +775,11 @@ begin
         display_name(new.student_id) || ' paid. ' ||
         case when new.mode = 'online' then 'Online via ' || new.platform || '.' else 'Meet at ' || new.location || '.' end, '/activity');
     elsif new.status = 'completed' then
+      update payments set status = 'released' where ref_type = 'booking' and ref_id = new.id and status = 'held';
       perform notify(new.tutor_id, 'Payment released',
         'PHP ' || new.amount || ' for ' || new.subject || ' is now yours. Leave a review!', '/activity');
     elsif new.status = 'cancelled' then
+      update payments set status = 'refunded' where ref_type = 'booking' and ref_id = new.id and status = 'held';
       perform notify(case when auth.uid() = new.tutor_id then new.student_id else new.tutor_id end,
         'Booking cancelled', new.subject || ' session was cancelled.', '/activity');
     end if;

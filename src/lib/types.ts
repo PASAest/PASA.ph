@@ -93,6 +93,8 @@ export type Booking = {
   amount: number;
   fee: number;
   status: BookingStatus;
+  /** When the tutor confirmed the session took place. After this the student can no longer cancel. */
+  delivered_at: string | null;
   created_at: string;
   student?: Profile;
   tutor?: Profile;
