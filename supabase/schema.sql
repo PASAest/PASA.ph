@@ -991,7 +991,7 @@ create policy "admin update" on public.profiles for update to authenticated usin
 create policy "admin update" on public.payments for update to authenticated using (is_admin());
 
 -- ─────────────────────────────────────────────────────────────
--- Realtime (live chat and notification badge)
+-- Realtime (live chat, notification badge, orders, sessions, wallet)
 -- ─────────────────────────────────────────────────────────────
 do $$ begin
   alter publication supabase_realtime add table public.messages;
@@ -1001,6 +1001,18 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 do $$ begin
   alter publication supabase_realtime add table public.bans;
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.orders;
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.bookings;
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.payments;
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.payouts;
 exception when duplicate_object then null; end $$;
 
 -- ─────────────────────────────────────────────────────────────

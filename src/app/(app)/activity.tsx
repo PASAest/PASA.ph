@@ -60,7 +60,7 @@ export default function Activity() {
     // Seeing your activity clears activity notifications.
     supabase.from('notifications').update({ read: true }).eq('user_id', me.id).eq('link', '/activity').then();
   };
-  const { refreshing, refresh, loaded } = useFocusLoad(load);
+  const { refreshing, refresh, loaded } = useFocusLoad(load, [], ['orders', 'bookings', 'payments']);
 
   return (
     <Screen back title="My Activity" refreshing={refreshing} onRefresh={refresh}>

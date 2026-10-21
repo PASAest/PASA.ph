@@ -59,7 +59,7 @@ function WalletContent({ changePin }: { changePin: () => void }) {
     setEarnings((e.data as unknown as Earning[]) ?? []);
     setPayouts((p.data as Payout[]) ?? []);
   };
-  useFocusLoad(load);
+  useFocusLoad(load, [], ['payments', 'payouts']);
 
   if (!earnings) return <Screen back title="Wallet"><Loading /></Screen>;
   const released = earnings.filter((e) => e.status === 'released').reduce((s, e) => s + earned(e), 0);
